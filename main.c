@@ -554,6 +554,15 @@ struct GenericStack {
   void *(*push)(void *, void *);
 };
 
+struct Expression *allocateSingleCharExpression(char item) {
+  struct Expression *newExpression = malloc(sizeof(struct Expression));
+  char *newChar = malloc(sizeof(char));
+  *newChar = item;
+  newExpression->expression = newChar;
+  newExpression->length = 1;
+  return newExpression;
+}
+
 // Prototype function for splitting a string into tokens
 struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
   struct ExpressionStack *first = createStackE();
@@ -563,51 +572,27 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
   int sizeOfExpressionArray = 0;
   while (counter < size) {
     if (array[counter] == '(') {
-      struct Expression *newExpression = malloc(sizeof(struct Expression));
-      char *newChar = malloc(sizeof(char));
-      *newChar = '(';
-      newExpression->expression = newChar;
-      newExpression->length = 1;
+      struct Expression *newExpression = allocateSingleCharExpression('(');
       first = pushE(newExpression, first);
       sizeOfExpressionArray++;
     } else if (array[counter] == ')') {
-      struct Expression *newExpression = malloc(sizeof(struct Expression));
-      char *newChar = malloc(sizeof(char));
-      *newChar = ')';
-      newExpression->expression = newChar;
-      newExpression->length = 1;
+      struct Expression *newExpression = allocateSingleCharExpression(')');
       first = pushE(newExpression, first);
       sizeOfExpressionArray++;
     } else if (array[counter] == '}') {
-      struct Expression *newExpression = malloc(sizeof(struct Expression));
-      char *newChar = malloc(sizeof(char));
-      *newChar = '}';
-      newExpression->expression = newChar;
-      newExpression->length = 1;
+      struct Expression *newExpression = allocateSingleCharExpression('}');
       first = pushE(newExpression, first);
       sizeOfExpressionArray++;
     } else if (array[counter] == '{') {
-      struct Expression *newExpression = malloc(sizeof(struct Expression));
-      char *newChar = malloc(sizeof(char));
-      *newChar = '{';
-      newExpression->expression = newChar;
-      newExpression->length = 1;
+      struct Expression *newExpression = allocateSingleCharExpression('{');
       first = pushE(newExpression, first);
       sizeOfExpressionArray++;
     } else if (array[counter] == 'f' && array[counter + 1] == '(') {
-      struct Expression *newExpression = malloc(sizeof(struct Expression));
-      char *newChar = malloc(sizeof(char));
-      *newChar = 'f';
-      newExpression->expression = newChar;
-      newExpression->length = 1;
+      struct Expression *newExpression = allocateSingleCharExpression('f');
       first = pushE(newExpression, first);
       sizeOfExpressionArray++;
     } else if (array[counter] == 'w' && array[counter + 1] == '(') {
-      struct Expression *newExpression = malloc(sizeof(struct Expression));
-      char *newChar = malloc(sizeof(char));
-      *newChar = 'w';
-      newExpression->expression = newChar;
-      newExpression->length = 1;
+      struct Expression *newExpression = allocateSingleCharExpression('w');
       first = pushE(newExpression, first);
       sizeOfExpressionArray++;
     } else if (array[counter] != '(' && array[counter] != ')' &&
@@ -630,11 +615,7 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
       newExp->expression = charBlock;
       first = pushE(newExp, first);
       sizeOfExpressionArray++;
-      struct Expression *newExpression = malloc(sizeof(struct Expression));
-      char *newChar = malloc(sizeof(char));
-      *newChar = array[counter];
-      newExpression->expression = newChar;
-      newExpression->length = 1;
+      struct Expression *newExpression = allocateSingleCharExpression(array[counter]);
       first = pushE(newExpression, first);
       sizeOfExpressionArray++;
     }
@@ -897,3 +878,4 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
 
   return initialNode;
 }
+
