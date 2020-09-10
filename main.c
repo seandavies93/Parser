@@ -571,23 +571,13 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
   int tempCharacterCount = 0;
   int sizeOfExpressionArray = 0;
   while (counter < size) {
-    if (array[counter] == '(') {
-      first = pushE(allocateSingleCharExpression('('), first);
-      sizeOfExpressionArray++;
-    } else if (array[counter] == ')') {
-      first = pushE(allocateSingleCharExpression(')'), first);
-      sizeOfExpressionArray++;
-    } else if (array[counter] == '}') {
-      first = pushE(allocateSingleCharExpression('}'), first);
-      sizeOfExpressionArray++;
-    } else if (array[counter] == '{') {
-      first = pushE(allocateSingleCharExpression('{'), first);
-      sizeOfExpressionArray++;
-    } else if (array[counter] == 'f' && array[counter + 1] == '(') {
-      first = pushE(allocateSingleCharExpression('f'), first);
-      sizeOfExpressionArray++;
-    } else if (array[counter] == 'w' && array[counter + 1] == '(') {
-      first = pushE(allocateSingleCharExpression('w'), first);
+    if (array[counter] == '(' || 
+       array[counter] == ')' || 
+       array[counter] == '}' || 
+       array[counter] == '{' || 
+       (array[counter] == 'f' && array[counter + 1] == '(') || 
+       (array[counter] == 'w' && array[counter + 1] == '(')) {
+      first = pushE(allocateSingleCharExpression(array[counter]), first);
       sizeOfExpressionArray++;
     } else if (array[counter] != '(' && array[counter] != ')' &&
                array[counter] != ';' && array[counter] != 'f' &&
