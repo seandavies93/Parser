@@ -431,7 +431,7 @@ int main(int argc, char *argv[]) {
 
   "Yes, they are equivalent.
 
-  Quoting C11, chapter ง7.22.3.3, (emphasis mine)
+  Quoting C11, chapter ยง7.22.3.3, (emphasis mine)
 
   The free function causes the space pointed to by ptr to be deallocated, that
   is, made available for further allocation. If ptr is a null pointer, no action
@@ -572,28 +572,22 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
   int sizeOfExpressionArray = 0;
   while (counter < size) {
     if (array[counter] == '(') {
-      struct Expression *newExpression = allocateSingleCharExpression('(');
-      first = pushE(newExpression, first);
+      first = pushE(allocateSingleCharExpression('('), first);
       sizeOfExpressionArray++;
     } else if (array[counter] == ')') {
-      struct Expression *newExpression = allocateSingleCharExpression(')');
-      first = pushE(newExpression, first);
+      first = pushE(allocateSingleCharExpression(')'), first);
       sizeOfExpressionArray++;
     } else if (array[counter] == '}') {
-      struct Expression *newExpression = allocateSingleCharExpression('}');
-      first = pushE(newExpression, first);
+      first = pushE(allocateSingleCharExpression('}'), first);
       sizeOfExpressionArray++;
     } else if (array[counter] == '{') {
-      struct Expression *newExpression = allocateSingleCharExpression('{');
-      first = pushE(newExpression, first);
+      first = pushE(allocateSingleCharExpression('{'), first);
       sizeOfExpressionArray++;
     } else if (array[counter] == 'f' && array[counter + 1] == '(') {
-      struct Expression *newExpression = allocateSingleCharExpression('f');
-      first = pushE(newExpression, first);
+      first = pushE(allocateSingleCharExpression('f'), first);
       sizeOfExpressionArray++;
     } else if (array[counter] == 'w' && array[counter + 1] == '(') {
-      struct Expression *newExpression = allocateSingleCharExpression('w');
-      first = pushE(newExpression, first);
+      first = pushE(allocateSingleCharExpression('w'), first);
       sizeOfExpressionArray++;
     } else if (array[counter] != '(' && array[counter] != ')' &&
                array[counter] != ';' && array[counter] != 'f' &&
@@ -615,8 +609,7 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
       newExp->expression = charBlock;
       first = pushE(newExp, first);
       sizeOfExpressionArray++;
-      struct Expression *newExpression = allocateSingleCharExpression(array[counter]);
-      first = pushE(newExpression, first);
+      first = pushE(allocateSingleCharExpression(array[counter]), first);
       sizeOfExpressionArray++;
     }
     counter++;
