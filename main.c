@@ -5,10 +5,9 @@
 /*
 
 Given that this is about parsing a stream of text
-I might as well start writing the code for the next thing here.
-
-The next thing being a program to inspect the normal form of
-a boolean expression and finding a way to minimise it.
+I might as well start writing the code for the
+next thing here. The next thing being a program
+to inspect the normal form of a boolean expression and finding a way to minimise it.
 
 The normal form expression could be fed in as text
 and then parsed, hence the relation to this work.
@@ -66,7 +65,15 @@ int getAppropriateSkipReduction(int *patternSkipReductionData, int index) {
   }
   return index;
 }
-
+/*
+ If there are no repetitions of a prefix to be found in the pattern then
+ we can fully skip to the current index
+ The only situation the necessitates not fully skipping is if there is a
+ substring prefix all the way up to  j - 1 (but not including j as if we
+ are in this clause then we know this doesn't match therefore that
+ character of the prefix substring will not match when it first appears
+ in the actual prefix not the duplicate)
+*/
 int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern) {
   int i = 0;
   int j = 0;
@@ -76,13 +83,6 @@ int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern) {
     if (text[i] != pattern[j]) {
       int lastIndexWithNonZeroSkipReduction =
           getAppropriateSkipReduction(patternSkipReductionData, j);
-      // If there are no repetitions of a prefix to be found in the pattern then
-      // we can fully skip to the current index
-      // The only situation the necessitates not fully skipping is if there is a
-      // substring prefix all the way up to  j - 1 (but not including j as if we
-      // are in this clause then we know this doesn't match therefore that
-      // character of the prefix substring will not match when it first appears
-      // in the actual prefix not the duplicate)
       if (patternSkipReductionData[j] != 0 ||
           j - lastIndexWithNonZeroSkipReduction > 1) {
         j = 0;
@@ -106,22 +106,24 @@ int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern) {
 ilsdfisdlfiulsidufabcdefgouabcdefgoutfgrres
 */
 
-// Structure for a linked list of rows
+/* Structure for a linked list of rows */
 struct RowList {
   int rowIndex;
   struct Row *row;
   struct RowList *rowList;
 };
 
-// Struct for columns along the row
+/* Struct for columns along the row */
 struct Row {
   int columnIndex;
   int nextSymbol;
   struct Row *next;
 };
 
-// Packaged struct including the automaton table and the known final state for
-// use in searching
+/*
+ Packaged struct including the automaton table and the known final state for
+ use in searching
+*/
 struct RegexData {
   struct RowList *regexTable;
   int finalState;
@@ -132,7 +134,9 @@ struct LinkedString {
   struct LinkedString *next;
 };
 
-// Create a row with a particular rowIndex
+/*
+ Create a row with a particular rowIndex
+*/
 struct RowList *createRowList(int rowIndex) {
   struct RowList *first = malloc(sizeof(struct RowList));
   first->rowIndex = rowIndex;
@@ -140,7 +144,9 @@ struct RowList *createRowList(int rowIndex) {
   return first;
 }
 
-// Create an initial row
+/*
+ Create an initial row
+*/
 struct RowList *createRowListFirst() {
   struct RowList *first = malloc(sizeof(struct RowList));
   first->rowIndex = 0;
@@ -148,7 +154,9 @@ struct RowList *createRowListFirst() {
   return first;
 }
 
-// Create a column entry with a particular columnIndex
+/*
+ Create a column entry with a particular columnIndex
+ */
 struct Row *createRow(int columnIndex) {
   struct Row *first = malloc(sizeof(struct Row));
   first->columnIndex = columnIndex;
@@ -156,7 +164,9 @@ struct Row *createRow(int columnIndex) {
   return first;
 }
 
-// Create an initial column entry
+/*
+ Create an initial column entry
+*/
 struct Row *createRowFirst() {
   struct Row *first = malloc(sizeof(struct Row));
   first->columnIndex = 0;
@@ -164,8 +174,10 @@ struct Row *createRowFirst() {
   return first;
 }
 
-// Inserting an item in a row at the correct position (based on column index and
-// assuming a node does not exists for this columnIndex already)
+/*
+ Inserting an item in a row at the correct position (based on column index and
+ assuming a node does not exists for this columnIndex already)
+*/
 struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
                                                struct Row *row) {
   struct Row *previous = row;
@@ -176,17 +188,22 @@ struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
     newRow->nextSymbol = nextSymbol;
     return newRow;
   }
-  // Iterate through keeping track of the current node and the previous
-  // stop as soon as the tracker's columnIndex stops being less then the
-  // supplied columnIndex
+
+  /*
+   Iterate through keeping track of the current node and the previous
+   stop as soon as the tracker's columnIndex stops being less then the
+   supplied columnIndex
+  */
   while (tracker != NULL && tracker->columnIndex < columnIndex) {
     previous = tracker;
     tracker = tracker->next;
   }
 
-  // We have now found the right place to insert, we need to create a new column
-  // entry were the previous should now point at the new entry, and the new
-  // entry should point where the previous was pointing before we inserted
+  /*
+   We have now found the right place to insert, we need to create a new column
+   entry were the previous should now point at the new entry, and the new
+   entry should point where the previous was pointing before we inserted
+  */
   struct Row *newRow = createRow(columnIndex);
   newRow->nextSymbol = nextSymbol;
   newRow->next = tracker;
@@ -194,7 +211,9 @@ struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
   return row;
 }
 
-// Insert an item into the table based on the desired indices
+/*
+ Insert an item into the table based on the desired indices
+*/
 struct RowList *insertAtPlace(int nextSymbol, int columnIndex, int rowIndex,
                               struct RowList *table) {
   struct RowList *rowTracker = table;
@@ -277,9 +296,10 @@ struct LinkedString *pop(struct LinkedString *first,
     return first;
   }
 }
-
-// Find the first index of a matching string in the supplied string using the
-// regex
+/*
+ Find the first index of a matching string in the supplied string using the
+ regex
+*/
 int findMatch(char *array, int startIndex, int endIndex,
               struct RegexData *regex) {
   int offset = startIndex;
@@ -303,8 +323,10 @@ int findMatch(char *array, int startIndex, int endIndex,
   return offset + relativeIndex - 1;
 }
 
-// Find the last index of a matching string within another string, using the
-// Regex data
+/*
+ Find the last index of a matching string within another string, using the
+ Regex data
+*/
 int findMatchEndIndex(char *array, int startIndex, int endIndex,
                       struct RegexData *regex) {
   int trackingIndex = startIndex;
@@ -319,7 +341,9 @@ int findMatchEndIndex(char *array, int startIndex, int endIndex,
   return trackingIndex - 1;
 }
 
-// Creates a basic character string regular expression matcher
+/*
+ Creates a basic character string regular expression matcher
+*/
 struct RegexData *createBasicAlphabetStringMatcher() {
   int startSymbol = 32;
   int i = startSymbol;
@@ -563,7 +587,9 @@ struct Expression *allocateSingleCharExpression(char item) {
   return newExpression;
 }
 
-// Prototype function for splitting a string into tokens
+/*
+ function for splitting a string into tokens
+*/
 struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
   struct ExpressionStack *first = createStackE();
   struct LinkedString *firstCharacterOnStore = createStack();
@@ -571,12 +597,10 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
   int tempCharacterCount = 0;
   int sizeOfExpressionArray = 0;
   while (counter < size) {
-    if (array[counter] == '(' || 
-       array[counter] == ')' || 
-       array[counter] == '}' || 
-       array[counter] == '{' || 
-       (array[counter] == 'f' && array[counter + 1] == '(') || 
-       (array[counter] == 'w' && array[counter + 1] == '(')) {
+    if (array[counter] == '(' || array[counter] == ')' ||
+        array[counter] == '}' || array[counter] == '{' ||
+        (array[counter] == 'f' && array[counter + 1] == '(') ||
+        (array[counter] == 'w' && array[counter + 1] == '(')) {
       first = pushE(allocateSingleCharExpression(array[counter]), first);
       sizeOfExpressionArray++;
     } else if (array[counter] != '(' && array[counter] != ')' &&
@@ -680,8 +704,10 @@ char getCurrentConstructCode(struct GrammarStack *first) {
   }
 }
 
-// Basic parser using a Node stack instead of the implicit function call stack
-// (can swap over as a refactoring challenge sometime)
+/*
+ Basic parser using a Node stack instead of the implicit function call stack
+ (can swap over as a refactoring challenge sometime)
+*/
 struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
   struct Node *newChild;
   struct GrammarStack *expressionGroup = malloc(sizeof(struct GrammarStack));
@@ -861,4 +887,3 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
 
   return initialNode;
 }
-
