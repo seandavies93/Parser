@@ -44,8 +44,6 @@ struct termArray {
 int *generatePatternSkipData(char *pattern, int sizeOfPattern) {
   int i = 0;
   int j = 1;
-  // Generate the array which tells us by how much to reduce the amount of items
-  // we skip while searching through the text
   int *patternSkipReductionData = malloc(sizeOfPattern * sizeof(int));
   patternSkipReductionData[0] = 0;
   while (j < sizeOfPattern) {
@@ -57,22 +55,25 @@ int *generatePatternSkipData(char *pattern, int sizeOfPattern) {
   return patternSkipReductionData;
 }
 
+/*
+  We can iterate backwards through the pattern skip reduction array to find
+  if a prefix duplicate exists in the pattern
+*/
 int getAppropriateSkipReduction(int *patternSkipReductionData, int index) {
-  // We can iterate backwards through the pattern skip reduction array to find
-  // if a prefix duplicate exists in the pattern
   while (patternSkipReductionData[index] == 0 && index >= 0) {
     index--;
   }
   return index;
 }
+
 /*
- If there are no repetitions of a prefix to be found in the pattern then
- we can fully skip to the current index
- The only situation the necessitates not fully skipping is if there is a
- substring prefix all the way up to  j - 1 (but not including j as if we
- are in this clause then we know this doesn't match therefore that
- character of the prefix substring will not match when it first appears
- in the actual prefix not the duplicate)
+  If there are no repetitions of a prefix to be found in the pattern then
+  we can fully skip to the current index
+  The only situation the necessitates not fully skipping is if there is a
+  substring prefix all the way up to  j - 1 (but not including j as if we
+  are in this clause then we know this doesn't match therefore that
+  character of the prefix substring will not match when it first appears
+  in the actual prefix not the duplicate)
 */
 int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern) {
   int i = 0;
@@ -106,14 +107,18 @@ int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern) {
 ilsdfisdlfiulsidufabcdefgouabcdefgoutfgrres
 */
 
-/* Structure for a linked list of rows */
+/*
+  Structure for a linked list of rows
+*/
 struct RowList {
   int rowIndex;
   struct Row *row;
   struct RowList *rowList;
 };
 
-/* Struct for columns along the row */
+/*
+  Struct for columns along the row
+*/
 struct Row {
   int columnIndex;
   int nextSymbol;
@@ -121,8 +126,8 @@ struct Row {
 };
 
 /*
- Packaged struct including the automaton table and the known final state for
- use in searching
+  Packaged struct including the automaton table and the known final state for
+  use in searching
 */
 struct RegexData {
   struct RowList *regexTable;
@@ -135,7 +140,7 @@ struct LinkedString {
 };
 
 /*
- Create a row with a particular rowIndex
+  Create a row with a particular rowIndex
 */
 struct RowList *createRowList(int rowIndex) {
   struct RowList *first = malloc(sizeof(struct RowList));
@@ -145,7 +150,7 @@ struct RowList *createRowList(int rowIndex) {
 }
 
 /*
- Create an initial row
+  Create an initial row
 */
 struct RowList *createRowListFirst() {
   struct RowList *first = malloc(sizeof(struct RowList));
@@ -155,8 +160,8 @@ struct RowList *createRowListFirst() {
 }
 
 /*
- Create a column entry with a particular columnIndex
- */
+  Create a column entry with a particular columnIndex
+*/
 struct Row *createRow(int columnIndex) {
   struct Row *first = malloc(sizeof(struct Row));
   first->columnIndex = columnIndex;
@@ -165,7 +170,7 @@ struct Row *createRow(int columnIndex) {
 }
 
 /*
- Create an initial column entry
+  Create an initial column entry
 */
 struct Row *createRowFirst() {
   struct Row *first = malloc(sizeof(struct Row));
@@ -175,8 +180,8 @@ struct Row *createRowFirst() {
 }
 
 /*
- Inserting an item in a row at the correct position (based on column index and
- assuming a node does not exists for this columnIndex already)
+  Inserting an item in a row at the correct position (based on column index and
+  assuming a node does not exists for this columnIndex already)
 */
 struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
                                                struct Row *row) {
@@ -212,7 +217,7 @@ struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
 }
 
 /*
- Insert an item into the table based on the desired indices
+  Insert an item into the table based on the desired indices
 */
 struct RowList *insertAtPlace(int nextSymbol, int columnIndex, int rowIndex,
                               struct RowList *table) {
@@ -296,9 +301,10 @@ struct LinkedString *pop(struct LinkedString *first,
     return first;
   }
 }
+
 /*
- Find the first index of a matching string in the supplied string using the
- regex
+  Find the first index of a matching string in the supplied string using the
+  regex
 */
 int findMatch(char *array, int startIndex, int endIndex,
               struct RegexData *regex) {
@@ -324,8 +330,8 @@ int findMatch(char *array, int startIndex, int endIndex,
 }
 
 /*
- Find the last index of a matching string within another string, using the
- Regex data
+  Find the last index of a matching string within another string, using the
+  Regex data
 */
 int findMatchEndIndex(char *array, int startIndex, int endIndex,
                       struct RegexData *regex) {
@@ -446,9 +452,6 @@ int main(int argc, char *argv[]) {
   // Need to free first the individual pointers in this block, then the entire
   // block
   struct Node *parseTree = parseCode(arrayExp, numberOfTokens);
-
-  // I believe this has the desired behaviour even though it is a copy of the
-  // initial pointer variable
 
   /*
   Stackoverflow answer for later perusal:
@@ -576,6 +579,7 @@ struct ExpressionStack *createStackE() {
 struct GenericStack {
   void *stackTop;
   void *(*push)(void *, void *);
+  void *(*pop)(void*);
 };
 
 struct Expression *allocateSingleCharExpression(char item) {
@@ -588,7 +592,7 @@ struct Expression *allocateSingleCharExpression(char item) {
 }
 
 /*
- function for splitting a string into tokens
+  function for splitting a string into tokens
 */
 struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
   struct ExpressionStack *first = createStackE();
@@ -617,7 +621,7 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
       newExp->length = tempCharacterCount;
       while (tempCharacterCount > 0) {
         firstCharacterOnStore =
-            pop(firstCharacterOnStore, &(charBlock[tempCharacterCount - 1]));
+            pop(firstCharacterOnStore, charBlock + (tempCharacterCount - 1));
         tempCharacterCount--;
       }
       newExp->expression = charBlock;
@@ -705,8 +709,8 @@ char getCurrentConstructCode(struct GrammarStack *first) {
 }
 
 /*
- Basic parser using a Node stack instead of the implicit function call stack
- (can swap over as a refactoring challenge sometime)
+  Basic parser using a Node stack instead of the implicit function call stack
+  (can swap over as a refactoring challenge sometime)
 */
 struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
   struct Node *newChild;
@@ -754,7 +758,7 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
       newChild = initialiseNode(currentState);
       pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
       currentWorkingNode = pushG(newChild, currentWorkingNode);
-      addInitialLoopSpecToNode(newChild, &(lexedContent[i]));
+      addInitialLoopSpecToNode(newChild, lexedContent + i);
       currentContext = 'e';
       i += 3;
       needToDeallocateCurrentExpression = 1;
