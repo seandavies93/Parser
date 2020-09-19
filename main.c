@@ -348,7 +348,7 @@ int findMatchEndIndex(char *array, int startIndex, int endIndex,
 }
 
 /*
- Creates a basic character string regular expression matcher
+  Creates a basic character string regular expression matcher
 */
 struct RegexData *createBasicAlphabetStringMatcher() {
   int startSymbol = 32;
@@ -708,6 +708,62 @@ char getCurrentConstructCode(struct GrammarStack *first) {
   }
 }
 
+struct GrammarStack *pushMathNodeWhenEncounteringPlusSymbol(struct GrammarStack *currentWorkingNode, struct Expression *mathExp, int *depthOfMathStructure) {
+  struct Node *math;
+  struct Node *newChild;
+  if (getCurrentConstructCode(currentWorkingNode) == 'm' ||
+      getCurrentConstructCode(currentWorkingNode) == 'b') {
+    newChild = initialiseNode('+');
+    pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
+    currentWorkingNode = pushG(newChild, currentWorkingNode);
+    math = initialiseNode('m');
+    addPlainExpressionToNode(math);
+    math->conditional->containedExpression = mathExp;
+    pushNodeIntoExpressionGroup(currentWorkingNode, math);
+    (*depthOfMathStructure)++;
+  } else if (getCurrentConstructCode(currentWorkingNode) == '*') {
+    math = initialiseNode('m');
+    addPlainExpressionToNode(math);
+    math->conditional->containedExpression = mathExp;
+    pushNodeIntoExpressionGroup(currentWorkingNode, math);
+    currentWorkingNode = popG(currentWorkingNode);
+    (*depthOfMathStructure)--;
+  } else if (getCurrentConstructCode(currentWorkingNode) == '+') {
+    math = initialiseNode('m');
+    addPlainExpressionToNode(math);
+    math->conditional->containedExpression = mathExp;
+    pushNodeIntoExpressionGroup(currentWorkingNode, math);
+  }
+  return currentWorkingNode;
+}
+
+struct GrammarStack *pushMathNodeWhenEncounteringMultiplySymbol(struct GrammarStack *currentWorkingNode, struct Expression *mathExp, int *depthOfMathStructure) {
+  struct Node *math;
+  struct Node *newChild;
+  if (getCurrentConstructCode(currentWorkingNode) == 'm' ||
+      getCurrentConstructCode(currentWorkingNode) == 'b') {
+    // By default we have a simple two level tree for non-bracketed series
+    // of multiplications and additions
+    newChild = initialiseNode('+');
+    pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
+    currentWorkingNode = pushG(newChild, currentWorkingNode);
+    newChild = initialiseNode('*');
+    pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
+    currentWorkingNode = pushG(newChild, currentWorkingNode);
+    *depthOfMathStructure = (*depthOfMathStructure) + 2;
+  } else if (getCurrentConstructCode(currentWorkingNode) == '+') {
+    newChild = initialiseNode('*');
+    pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
+    currentWorkingNode = pushG(newChild, currentWorkingNode);
+    (*depthOfMathStructure)++;
+  }
+  math = initialiseNode('m');
+  addPlainExpressionToNode(math);
+  math->conditional->containedExpression = mathExp;
+  pushNodeIntoExpressionGroup(currentWorkingNode, math);
+  return currentWorkingNode;
+}
+
 /*
   Basic parser using a Node stack instead of the implicit function call stack
   (can swap over as a refactoring challenge sometime)
@@ -778,55 +834,11 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
     } else if (currentContext == 'm' &&
                (*(lexedContent[i + 1]->expression) == '+' ||
                 *(lexedContent[i + 1]->expression) == ';')) {
-      struct Node *math;
-      if (getCurrentConstructCode(currentWorkingNode) == 'm' ||
-          getCurrentConstructCode(currentWorkingNode) == 'b') {
-        newChild = initialiseNode('+');
-        pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-        currentWorkingNode = pushG(newChild, currentWorkingNode);
-        math = initialiseNode('m');
-        addPlainExpressionToNode(math);
-        math->conditional->containedExpression = lexedContent[i];
-        pushNodeIntoExpressionGroup(currentWorkingNode, math);
-        depthOfMathStructure++;
-      } else if (getCurrentConstructCode(currentWorkingNode) == '*') {
-        math = initialiseNode('m');
-        addPlainExpressionToNode(math);
-        math->conditional->containedExpression = lexedContent[i];
-        pushNodeIntoExpressionGroup(currentWorkingNode, math);
-        currentWorkingNode = popG(currentWorkingNode);
-        depthOfMathStructure--;
-      } else if (getCurrentConstructCode(currentWorkingNode) == '+') {
-        math = initialiseNode('m');
-        addPlainExpressionToNode(math);
-        math->conditional->containedExpression = lexedContent[i];
-        pushNodeIntoExpressionGroup(currentWorkingNode, math);
-      }
+      currentWorkingNode = pushMathNodeWhenEncounteringPlusSymbol(currentWorkingNode, lexedContent[i], &depthOfMathStructure);
     } else if (currentContext == 'm' &&
                (*(lexedContent[i + 1]->expression) == '*' ||
                 *(lexedContent[i + 1]->expression) == ';')) {
-      struct Node *math;
-      if (getCurrentConstructCode(currentWorkingNode) == 'm' ||
-          getCurrentConstructCode(currentWorkingNode) == 'b') {
-        // By default we have a simple two level tree for non-bracketed series
-        // of multiplications and additions
-        newChild = initialiseNode('+');
-        pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-        currentWorkingNode = pushG(newChild, currentWorkingNode);
-        newChild = initialiseNode('*');
-        pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-        currentWorkingNode = pushG(newChild, currentWorkingNode);
-        depthOfMathStructure = depthOfMathStructure + 2;
-      } else if (getCurrentConstructCode(currentWorkingNode) == '+') {
-        newChild = initialiseNode('*');
-        pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-        currentWorkingNode = pushG(newChild, currentWorkingNode);
-        depthOfMathStructure++;
-      }
-      math = initialiseNode('m');
-      addPlainExpressionToNode(math);
-      math->conditional->containedExpression = lexedContent[i];
-      pushNodeIntoExpressionGroup(currentWorkingNode, math);
+      currentWorkingNode = pushMathNodeWhenEncounteringMultiplySymbol(currentWorkingNode, lexedContent[i], &depthOfMathStructure);
     } else if (*(lexedContent[i]->expression) == ';') {
       while (depthOfMathStructure > 0) {
         currentWorkingNode = popG(currentWorkingNode);
