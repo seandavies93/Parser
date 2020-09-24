@@ -627,8 +627,10 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
       newExp->expression = charBlock;
       first = pushE(newExp, first);
       sizeOfExpressionArray++;
-      first = pushE(allocateSingleCharExpression(array[counter]), first);
-      sizeOfExpressionArray++;
+      if (array[counter] != ',') {
+        first = pushE(allocateSingleCharExpression(array[counter]), first);
+        sizeOfExpressionArray++;
+      }
     }
     counter++;
   }
@@ -642,6 +644,8 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
   } while (first->next != NULL);
   free(firstCharacterOnStore);
   firstCharacterOnStore = NULL;
+  free(first);
+  first = NULL;
   *numberOfTokens = sizeOfExpressionArray;
   return result;
 };
@@ -764,13 +768,54 @@ struct GrammarStack *pushMathNodeWhenEncounteringMultiplySymbol(struct GrammarSt
   return currentWorkingNode;
 }
 
+struct GrammarStack *pushWhileNode(struct GrammarStack *currentWorkingNode) {
+  struct Node *newChild = initialiseNode('w');
+  pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
+  currentWorkingNode = pushG(newChild, currentWorkingNode);
+  addInitialWhileConditionToNode(newChild);
+  return currentWorkingNode;
+}
+
+struct GrammarStack *pushForNode(struct GrammarStack *currentWorkingNode, struct Expression **expressions) {
+  struct Node *newChild = initialiseNode('f');
+  pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
+  currentWorkingNode = pushG(newChild, currentWorkingNode);
+  addInitialLoopSpecToNode(newChild, expressions);
+  return currentWorkingNode;
+}
+
+struct GrammarStack *pushAssignmentNode(struct GrammarStack *currentWorkingNode, struct Expression *expression, int *depthOfMathStructure) {
+  struct Node *newChild = initialiseNode('=');
+  addPlainExpressionToNode(newChild);
+  newChild->conditional->containedExpression = expression;
+  pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
+  currentWorkingNode = pushG(newChild, currentWorkingNode);
+  (*depthOfMathStructure)++;
+  return currentWorkingNode;
+}
+
+struct GrammarStack *pushMainMathNode(struct GrammarStack *currentWorkingNode, int *depthOfMathStructure) {
+  struct Node *newChild = initialiseNode('m');
+  pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
+  currentWorkingNode = pushG(newChild, currentWorkingNode);
+  (*depthOfMathStructure)++;
+  return currentWorkingNode;
+}
+
+struct GrammarStack *pushBracketNode(struct GrammarStack *currentWorkingNode, int *depthOfMathStructure) {
+  struct Node *newChild = initialiseNode('b');
+  pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
+  currentWorkingNode = pushG(newChild, currentWorkingNode);
+  (*depthOfMathStructure)++;
+  return currentWorkingNode;
+}
+
 /*
   Basic parser using a Node stack instead of the implicit function call stack
   (can swap over as a refactoring challenge sometime)
 */
 struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
   struct Node *newChild;
-  struct GrammarStack *expressionGroup = malloc(sizeof(struct GrammarStack));
   struct Node *initialNode = initialiseNode('r');
   struct GrammarStack *currentWorkingNode = createStackG();
   currentWorkingNode = pushG(initialNode, currentWorkingNode);
@@ -780,8 +825,11 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
   char currentState = 'b';
   char currentContext = 'n';
   while (i < numberOfTokens) {
+    printf("%c", *(lexedContent[i]->expression));
     if (*(lexedContent[i]->expression) == '{') {
       currentContext = 'i';
+      needToDeallocateCurrentExpression = 1;
+    } else if (*(lexedContent[i]->expression) == ',') {
       needToDeallocateCurrentExpression = 1;
     } else if (*(lexedContent[i]->expression) == 'w') {
       currentState = 'w';
@@ -798,10 +846,7 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
       needToDeallocateCurrentExpression = 1;
     } else if (*(lexedContent[i]->expression) == '(' && currentContext == 'n' &&
                currentState == 'w') {
-      newChild = initialiseNode(currentState);
-      pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-      currentWorkingNode = pushG(newChild, currentWorkingNode);
-      addInitialWhileConditionToNode(newChild);
+      currentWorkingNode = pushWhileNode(currentWorkingNode);
       currentContext = 'e';
       needToDeallocateCurrentExpression = 1;
     } else if (*(lexedContent[i]->expression) == ')' && currentContext == 'e') {
@@ -811,26 +856,15 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
       (currentWorkingNode->next->node->conditional)->conditional =
           lexedContent[i];
     } else if (*(lexedContent[i]->expression) == '(' && currentState == 'f') {
-      newChild = initialiseNode(currentState);
-      pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-      currentWorkingNode = pushG(newChild, currentWorkingNode);
-      addInitialLoopSpecToNode(newChild, lexedContent + i);
+      currentWorkingNode = pushForNode(currentWorkingNode, lexedContent + i);
       currentContext = 'e';
       i += 3;
       needToDeallocateCurrentExpression = 1;
     } else if (currentContext == 'i' && *(lexedContent[i]->expression) != '=') {
-      newChild = initialiseNode('=');
-      addPlainExpressionToNode(newChild);
-      newChild->conditional->containedExpression = lexedContent[i];
-      pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-      currentWorkingNode = pushG(newChild, currentWorkingNode);
-      depthOfMathStructure++;
+      currentWorkingNode = pushAssignmentNode(currentWorkingNode, lexedContent[i], &depthOfMathStructure);
     } else if (currentContext == 'i' && *(lexedContent[i]->expression) == '=') {
       currentContext = 'm';
-      newChild = initialiseNode('m');
-      pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-      currentWorkingNode = pushG(newChild, currentWorkingNode);
-      depthOfMathStructure++;
+      currentWorkingNode = pushMainMathNode(currentWorkingNode, &depthOfMathStructure);
       needToDeallocateCurrentExpression = 1;
     } else if (currentContext == 'm' &&
                (*(lexedContent[i + 1]->expression) == '+' ||
@@ -849,10 +883,7 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
       needToDeallocateCurrentExpression = 1;
     } else if (currentContext == 'm' && *(lexedContent[i]->expression) == '(') {
       // 'b' indicates a node for brackets
-      newChild = initialiseNode('b');
-      pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-      currentWorkingNode = pushG(newChild, currentWorkingNode);
-      depthOfMathStructure++;
+      currentWorkingNode = pushBracketNode(currentWorkingNode, &depthOfMathStructure);
       needToDeallocateCurrentExpression = 1;
     } else if (currentContext == 'm' && *(lexedContent[i]->expression) == ')') {
       // 'b' indicates a node for brackets
@@ -870,13 +901,16 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
       lexedContent[i] = NULL;
       needToDeallocateCurrentExpression = 0;
     }
-
     i++;
   }
   printf("Root Node: %c\n",
          initialNode->expressionGroup->next->node->constructCode);
-  printf("%c\n", initialNode->expressionGroup->next->node->conditional
+  printf("initialise %c\n", initialNode->expressionGroup->next->node->conditional
                      ->forLoopSpec->initialiseLoop->expression[0]);
+printf("limit %c\n", initialNode->expressionGroup->next->node->conditional
+->forLoopSpec->limitLoop->expression[0]);
+printf("initial %c\n", initialNode->expressionGroup->next->node->conditional
+->forLoopSpec->incrementLoop->expression[0]);
   printf("Child Node While: %c\n",
          initialNode->expressionGroup->next->node->expressionGroup->next->node
              ->constructCode);
