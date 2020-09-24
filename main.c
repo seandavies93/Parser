@@ -831,6 +831,7 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
       pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
       currentWorkingNode = pushG(newChild, currentWorkingNode);
       depthOfMathStructure++;
+      needToDeallocateCurrentExpression = 1;
     } else if (currentContext == 'm' &&
                (*(lexedContent[i + 1]->expression) == '+' ||
                 *(lexedContent[i + 1]->expression) == ';')) {
