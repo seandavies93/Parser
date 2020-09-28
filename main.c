@@ -627,6 +627,8 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
       newExp->expression = charBlock;
       first = pushE(newExp, first);
       sizeOfExpressionArray++;
+      // Separation within for loop is implicit with the splitting off into different
+      // expressions
       if (array[counter] != ',') {
         first = pushE(allocateSingleCharExpression(array[counter]), first);
         sizeOfExpressionArray++;
@@ -651,9 +653,11 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens) {
 };
 
 struct LoopSpecExpression *
-initialiseLoopSpecExpression(struct Expression *expressionInitialiseLoop,
-                             struct Expression *expressionIncrementLoop,
-                             struct Expression *expressionLimitLoop) {
+initialiseLoopSpecExpression(
+    struct Expression *expressionInitialiseLoop,
+    struct Expression *expressionIncrementLoop,
+    struct Expression *expressionLimitLoop
+    ) {
   struct LoopSpecExpression *newSpec =
       malloc(sizeof(struct LoopSpecExpression));
   newSpec->initialiseLoop = expressionInitialiseLoop;
@@ -895,6 +899,8 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens) {
     } else if (*(lexedContent[i]->expression) == '+') {
       needToDeallocateCurrentExpression = 1;
     }
+
+    // De-allocate expression structs that will not be maintained past this phase
     if (needToDeallocateCurrentExpression) {
       free(lexedContent[i]->expression);
       free(lexedContent[i]);
