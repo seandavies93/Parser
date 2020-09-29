@@ -181,7 +181,7 @@ struct Row *createRowFirst() {
 
 /*
   Inserting an item in a row at the correct position (based on column index and
-  assuming a node does not exists for this columnIndex already)
+  assuming a node does not exist for this columnIndex already)
 */
 struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
                                                struct Row *row) {
@@ -212,8 +212,11 @@ struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
   struct Row *newRow = createRow(columnIndex);
   newRow->nextSymbol = nextSymbol;
   newRow->next = tracker;
-  previous->next = newRow;
-  return row;
+  if (tracker != previous) {
+    previous->next = newRow;
+    return row;
+  }
+  return newRow;
 }
 
 /*
@@ -244,7 +247,7 @@ struct RowList *insertAtPlace(int nextSymbol, int columnIndex, int rowIndex,
       if (rowTracker->rowIndex == rowIndex) {
         // Here we insert the value in sorted order since we have not found an
         // existing node for the row and column indices
-        insertItemAtAppropriateRowPosition(nextSymbol, columnIndex,
+        rowTracker->row = insertItemAtAppropriateRowPosition(nextSymbol, columnIndex,
                                            rowTracker->row);
         return table;
       }
