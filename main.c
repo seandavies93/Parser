@@ -203,12 +203,6 @@ struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
     previous = tracker;
     tracker = tracker->next;
   }
-
-  /*
-   We have now found the right place to insert, we need to create a new column
-   entry were the previous should now point at the new entry, and the new
-   entry should point where the previous was pointing before we inserted
-  */
   struct Row *newRow = createRow(columnIndex);
   newRow->nextSymbol = nextSymbol;
   newRow->next = tracker;
@@ -315,7 +309,6 @@ int findMatch(char *array, int startIndex, int endIndex,
   int currentState = 0;
   int previousState = 0;
   int relativeIndex = 0;
-
   while ((offset + relativeIndex) < endIndex) {
     previousState = currentState;
     currentState = getItemAtPlace(
@@ -328,7 +321,6 @@ int findMatch(char *array, int startIndex, int endIndex,
       relativeIndex = 0;
     }
   }
-
   return offset + relativeIndex - 1;
 }
 
