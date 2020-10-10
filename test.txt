@@ -1,1 +1,1 @@
-f(bax,bax,bax,){w(bax,){bax=(bax+bax);w(bax,){f(bax,bax,bax,){}w(bax,){}}}
+f(bax,bax,bax,){w(bax,){bax=(bax+bax);w(bax,){f(bax,){}w(bax,){}}}
