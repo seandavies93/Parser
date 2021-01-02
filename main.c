@@ -26,6 +26,10 @@ whether or not the i-th input is inverted or not in the product.
 
 */
 
+
+
+/* STRUCTS SECTION ////////////////////*/
+
 struct inversionStruct
 {
     int isInverted;
@@ -43,6 +47,214 @@ struct termArray
     struct termArray *next;
 };
 
+/*
+  Structure for a linked list of rows
+*/
+struct RowList
+{
+    int rowIndex;
+    struct Row *row;
+    struct RowList *rowList;
+};
+
+/*
+  Struct for columns along the row
+*/
+struct Row
+{
+    int columnIndex;
+    int nextSymbol;
+    struct Row *next;
+};
+
+/*
+  Packaged struct including the automaton table and the known final state for
+  use in searching
+*/
+struct RegexData
+{
+    struct RowList *regexTable;
+    int finalState;
+};
+
+struct LinkedString
+{
+    char curr;
+    struct LinkedString *next;
+};
+
+struct Expression
+{
+    int ordering;
+    int length;
+    char *expression;
+    int lineNumber;
+};
+
+/*
+    Possible memory efficient way of dealing with line numbers
+    consider after trying the naive way
+*/
+struct LineNumber {
+    int number;
+    struct ExpressionStack *applicableExpressions;
+};
+
+/*
+    Collection of line number to expression associations
+*/
+struct LineNumberStack {
+    struct LineNumber *data;
+    struct LineNumberStack *next;
+};
+
+/*
+    Output from the lexer, including tokenised expressions
+    and an association structure between line numbers and
+    expressions.
+*/
+struct LexerOutputData {
+    struct Expression **expressionOutput;
+    struct LineNumberStack *first;
+};
+
+struct LinkedStack
+{
+    char character;
+    struct Stack *nextPointer;
+};
+
+struct ExpressionStack
+{
+    struct Expression *expression;
+    struct ExpressionStack *next;
+};
+
+struct LoopSpecExpression
+{
+    struct Expression *initialiseLoop;
+    struct Expression *limitLoop;
+    struct Expression *incrementLoop;
+};
+
+union ConditionOrLoopSpec
+{
+    struct Expression *conditional;
+    struct LoopSpecExpression *forLoopSpec;
+    struct Expression *containedExpression;
+};
+
+struct Node
+{
+    int ordering;
+    char constructCode;
+    struct GrammarStack *expressionGroup;
+    union ConditionOrLoopSpec *conditional;
+};
+
+struct GrammarStack
+{
+    struct Node *node;
+    struct GrammarStack *next;
+};
+
+//////////////////// END ////////////////////
+/* STACK FUNCTION SECTION ////////////////////*/
+struct LinkedString *createStack()
+{
+    struct LinkedString *first = malloc(sizeof(struct LinkedString));
+    first->next = NULL;
+    return first;
+}
+
+struct LinkedString *push(char character, struct LinkedString *first)
+{
+    first->curr = character;
+    struct LinkedString *newCharacter = malloc(sizeof(struct LinkedString));
+    newCharacter->next = first;
+    return newCharacter;
+}
+
+struct LinkedString *pop(struct LinkedString *first,
+                         char *addressForPoppedElement)
+{
+    if (first->next != NULL)
+    {
+        *addressForPoppedElement = first->next->curr;
+        struct LinkedString *result = first->next;
+        free(first);
+        first = NULL;
+        return result;
+    }
+    *addressForPoppedElement = first->curr;
+    return first;
+}
+
+struct GrammarStack *createStackG()
+{
+    struct GrammarStack *first = malloc(sizeof(struct GrammarStack));
+    first->next = NULL;
+    return first;
+}
+
+struct ExpressionStack *pushE(struct Expression *expression,
+                              struct ExpressionStack *first)
+{
+    first->expression = expression;
+    struct ExpressionStack *newNode = malloc(sizeof(struct ExpressionStack));
+    newNode->next = first;
+    return newNode;
+}
+
+struct ExpressionStack *popE(struct ExpressionStack *first)
+{
+    if (first->next != NULL)
+    {
+        struct ExpressionStack *result = first->next;
+        free(first);
+        first = NULL;
+        return result;
+    }
+    else
+        return first;
+}
+
+struct ExpressionStack *createStackE()
+{
+    struct ExpressionStack *first = malloc(sizeof(struct ExpressionStack));
+    first->next = NULL;
+    return first;
+}
+
+struct LineNumberStack *pushLN(struct LineNumber *data,
+                              struct LineNumberStack *first)
+{
+    first->data = data;
+    struct LineNumberStack *newNode = malloc(sizeof(struct LineNumberStack));
+    newNode->next = first;
+    return newNode;
+}
+
+struct LineNumberStack *popLN(struct LineNumberStack *first)
+{
+    if (first->next != NULL)
+    {
+        struct LineNumberStack *result = first->next;
+        free(first);
+        first = NULL;
+        return result;
+    }
+    else
+        return first;
+}
+
+struct LineNumberStack *createStackLN()
+{
+    struct LineNumberStack *first = malloc(sizeof(struct LineNumberStack));
+    first->next = NULL;
+    return first;
+}
+//////////////////// END ////////////////////
 // Generate an array of integers indicating the reduction in how far we can skip
 // ahead when matching a string in some text
 int *generatePatternSkipData(char *pattern, int sizeOfPattern)
@@ -124,41 +336,7 @@ int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern)
 ilsdfisdlfiulsidufabcdefgouabcdefgoutfgrres
 */
 
-/*
-  Structure for a linked list of rows
-*/
-struct RowList
-{
-    int rowIndex;
-    struct Row *row;
-    struct RowList *rowList;
-};
 
-/*
-  Struct for columns along the row
-*/
-struct Row
-{
-    int columnIndex;
-    int nextSymbol;
-    struct Row *next;
-};
-
-/*
-  Packaged struct including the automaton table and the known final state for
-  use in searching
-*/
-struct RegexData
-{
-    struct RowList *regexTable;
-    int finalState;
-};
-
-struct LinkedString
-{
-    char curr;
-    struct LinkedString *next;
-};
 
 /*
   Create a row with a particular rowIndex
@@ -323,27 +501,50 @@ int getItemAtPlace(int columnIndex, int rowIndex, struct RowList *table)
     return -1;
 }
 
-struct LinkedString *push(char character, struct LinkedString *first)
+struct Row *deleteItemAtAppropriateRowPosition(int columnIndex,
+        struct Row *row)
 {
-    first->curr = character;
-    struct LinkedString *newCharacter = malloc(sizeof(struct LinkedString));
-    newCharacter->next = first;
-    return newCharacter;
-}
+    struct Row **pointerToRow = &row;
 
-struct LinkedString *pop(struct LinkedString *first,
-                         char *addressForPoppedElement)
-{
-    if (first->next != NULL)
+    if (row == NULL)
     {
-        *addressForPoppedElement = first->next->curr;
-        struct LinkedString *result = first->next;
-        free(first);
-        first = NULL;
+        return row;
+    }
+
+    if (row->columnIndex == columnIndex)
+    {
+        struct Row *result = row->next;
+        free(row);
         return result;
     }
-    *addressForPoppedElement = first->curr;
-    return first;
+
+    while (*pointerToRow != NULL && (*pointerToRow)->columnIndex != columnIndex)
+    {
+        pointerToRow = &((*pointerToRow)->next);
+    }
+
+    struct Row *toBeFreedRow = *pointerToRow;
+    *pointerToRow = toBeFreedRow->next;
+    free(toBeFreedRow);
+    return row;
+}
+
+void deleteAtPlace(int columnIndex, int rowIndex,
+                              struct RowList *table)
+{
+    struct RowList *rowTracker = table;
+    if (table != NULL)
+    {
+        while (rowTracker != NULL)
+        {
+            if (rowTracker->rowIndex == rowIndex)
+            {
+                rowTracker->row = deleteItemAtAppropriateRowPosition(
+                                      columnIndex, rowTracker->row);
+            }
+            rowTracker = rowTracker->rowList;
+        }
+    }
 }
 
 /*
@@ -443,20 +644,6 @@ struct RegexData *createBasicAlphabetStringMatcher()
     return regexData;
 }
 
-struct LinkedString *createStack()
-{
-    struct LinkedString *first = malloc(sizeof(struct LinkedString));
-    first->next = NULL;
-    return first;
-}
-
-struct Expression
-{
-    int ordering;
-    int length;
-    char *expression;
-};
-
 void deAllocateExpressionMemory(struct Expression *expression)
 {
     free(expression->expression);
@@ -554,46 +741,6 @@ int main(int argc, char *argv[])
     string2 = NULL;
 }
 
-struct LinkedStack
-{
-    char character;
-    struct Stack *nextPointer;
-};
-
-struct ExpressionStack
-{
-    struct Expression *expression;
-    struct ExpressionStack *next;
-};
-
-struct LoopSpecExpression
-{
-    struct Expression *initialiseLoop;
-    struct Expression *limitLoop;
-    struct Expression *incrementLoop;
-};
-
-union ConditionOrLoopSpec
-{
-    struct Expression *conditional;
-    struct LoopSpecExpression *forLoopSpec;
-    struct Expression *containedExpression;
-};
-
-struct Node
-{
-    int ordering;
-    char constructCode;
-    struct GrammarStack *expressionGroup;
-    union ConditionOrLoopSpec *conditional;
-};
-
-struct GrammarStack
-{
-    struct Node *node;
-    struct GrammarStack *next;
-};
-
 struct GrammarStack *pushG(struct Node *node, struct GrammarStack *first)
 {
     first->node = node;
@@ -615,42 +762,6 @@ struct GrammarStack *popG(struct GrammarStack *first)
         return first;
 }
 
-struct GrammarStack *createStackG()
-{
-    struct GrammarStack *first = malloc(sizeof(struct GrammarStack));
-    first->next = NULL;
-    return first;
-}
-
-struct ExpressionStack *pushE(struct Expression *expression,
-                              struct ExpressionStack *first)
-{
-    first->expression = expression;
-    struct ExpressionStack *newNode = malloc(sizeof(struct ExpressionStack));
-    newNode->next = first;
-    return newNode;
-}
-
-struct ExpressionStack *popE(struct ExpressionStack *first)
-{
-    if (first->next != NULL)
-    {
-        struct ExpressionStack *result = first->next;
-        free(first);
-        first = NULL;
-        return result;
-    }
-    else
-        return first;
-}
-
-struct ExpressionStack *createStackE()
-{
-    struct ExpressionStack *first = malloc(sizeof(struct ExpressionStack));
-    first->next = NULL;
-    return first;
-}
-
 struct GenericStack
 {
     void *stackTop;
@@ -658,18 +769,19 @@ struct GenericStack
     void *(*pop)(void *);
 };
 
-struct Expression *allocateSingleCharExpression(char item)
+struct Expression *allocateSingleCharExpression(char item, int lineNumber)
 {
     struct Expression *newExpression = malloc(sizeof(struct Expression));
     char *newChar = malloc(sizeof(char));
     *newChar = item;
     newExpression->expression = newChar;
     newExpression->length = 1;
+    newExpression->lineNumber = lineNumber;
     return newExpression;
 }
 
 /*
-  function for splitting a string into tokens
+    function for splitting a string into tokens
 */
 struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
 {
@@ -678,15 +790,21 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
     int counter = 0;
     int tempCharacterCount = 0;
     int sizeOfExpressionArray = 0;
+    int lineNumber = 0;
     while (counter < size)
     {
+        printf("Reading char lexer: %c\n", array[counter]);
         if (array[counter] == '(' || array[counter] == ')' ||
                 array[counter] == '}' || array[counter] == '{' ||
                 (array[counter] == 'f' && array[counter + 1] == '(') ||
                 (array[counter] == 'w' && array[counter + 1] == '('))
         {
-            first = pushE(allocateSingleCharExpression(array[counter]), first);
+            first = pushE(allocateSingleCharExpression(array[counter], lineNumber), first);
             sizeOfExpressionArray++;
+        }
+        else if (array[counter] == '\n')
+        {
+            lineNumber++;
         }
         else if (array[counter] != '(' && array[counter] != ')' &&
                  array[counter] != ';' && array[counter] != 'f' &&
@@ -710,13 +828,14 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
                 tempCharacterCount--;
             }
             newExp->expression = charBlock;
+            newExp->lineNumber = lineNumber;
             first = pushE(newExp, first);
             sizeOfExpressionArray++;
             // Separation within for loop is implicit with the splitting off into
             // different expressions
             if (array[counter] != ',')
             {
-                first = pushE(allocateSingleCharExpression(array[counter]), first);
+                first = pushE(allocateSingleCharExpression(array[counter], lineNumber), first);
                 sizeOfExpressionArray++;
             }
         }
@@ -727,6 +846,7 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
     int j = sizeOfExpressionArray - 1;
     do
     {
+        printf("Unrolling expressions: %c\n", *(first->next->expression->expression));
         result[j] = first->next->expression;
         first = popE(first);
         j--;
@@ -1104,6 +1224,7 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens)
     enum ParserContext currentContext = NORMAL;
     while (i < numberOfTokens)
     {
+        printf("Item: %c\n", *(lexedContent[i]->expression));
         if (currentContext == NORMAL && currentState == 'f' &&
                 *(lexedContent[i]->expression) != '(')
         {
