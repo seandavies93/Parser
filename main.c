@@ -91,6 +91,14 @@ struct Expression
     int lineNumber;
 };
 
+struct GenericStack
+{
+    void *stackTop;
+    void (*push)(void *, struct GenericStack *);
+    void *(*pop)(struct GenericStack *);
+    void *(*peek)(struct GenericStack *);
+};
+
 /*
     Possible memory efficient way of dealing with line numbers
     consider after trying the naive way
@@ -148,7 +156,7 @@ struct Node
 {
     int ordering;
     char constructCode;
-    struct GrammarStack *expressionGroup;
+    struct GenericStack *expressionGroup;
     union ConditionOrLoopSpec *conditional;
 };
 
@@ -190,40 +198,123 @@ struct LinkedString *pop(struct LinkedString *first,
     return first;
 }
 
-struct GrammarStack *createStackG()
+void pushGrammar(void *node, struct GenericStack *stack)
+{
+    if (stack->stackTop == NULL)
+    {
+        stack->stackTop = malloc(sizeof(struct GrammarStack));
+    }
+    ((struct GrammarStack*)stack->stackTop)->node = node;
+    struct GrammarStack *newNode = malloc(sizeof(struct GrammarStack));
+    newNode->next = (struct GrammarStack*)stack->stackTop;
+    stack->stackTop = (void*)newNode;
+}
+
+void *popGrammar(struct GenericStack *stack)
+{
+    struct GrammarStack *first = (struct GrammarStack*)stack->stackTop;
+    struct Node *result;
+    if (first == NULL) return NULL;
+    if (first->next != NULL)
+    {
+        result = ((struct GrammarStack*)stack->stackTop)->next->node;
+        stack->stackTop = (void*)first->next;
+        free(first);
+
+    }
+    else
+    {
+        result = NULL;
+        free(first);
+        stack->stackTop = NULL;
+    }
+    return result;
+}
+
+void *peekGrammar(struct GenericStack *stack)
+{
+    struct GrammarStack *first = (struct GrammarStack*)stack->stackTop;
+    if (first == NULL) return NULL;
+    if (first->next != NULL)
+    {
+        return ((struct GrammarStack*)stack->stackTop)->next->node;
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
+struct GenericStack *createStackGrammar()
 {
     struct GrammarStack *first = malloc(sizeof(struct GrammarStack));
     first->next = NULL;
-    return first;
+    struct GenericStack *stack = malloc(sizeof(struct GenericStack));
+    stack->stackTop = (void*)first;
+    stack->pop = popGrammar;
+    stack->push = pushGrammar;
+    stack->peek = peekGrammar;
+    return stack;
 }
 
-struct ExpressionStack *pushE(struct Expression *expression,
-                              struct ExpressionStack *first)
+void pushExpression(void *expression,
+                              struct GenericStack *stack)
 {
-    first->expression = expression;
+    if (stack->stackTop == NULL)
+    {
+        stack->stackTop = malloc(sizeof(struct ExpressionStack));
+    }
+    ((struct ExpressionStack*) stack->stackTop)->expression = expression;
     struct ExpressionStack *newNode = malloc(sizeof(struct ExpressionStack));
-    newNode->next = first;
-    return newNode;
+    newNode->next = (struct ExpressionStack*) stack->stackTop;
+    stack->stackTop = (void*) newNode;
 }
 
-struct ExpressionStack *popE(struct ExpressionStack *first)
+void *popExpression(struct GenericStack *stack)
 {
+    struct ExpressionStack *first = (struct ExpressionStack*) stack->stackTop;
+    struct Expression *result;
+    if (first == NULL) return NULL;
     if (first->next != NULL)
     {
-        struct ExpressionStack *result = first->next;
+        result = ((struct ExpressionStack*) stack->stackTop)->next->expression;
+        stack->stackTop = (void*)first->next;
         free(first);
-        first = NULL;
-        return result;
+
     }
     else
-        return first;
+    {
+        result = NULL;
+        free(first);
+        stack->stackTop = NULL;
+    }
+    return result;
 }
 
-struct ExpressionStack *createStackE()
+void *peekExpression(struct GenericStack *stack)
+{
+    struct ExpressionStack *first = (struct ExpressionStack*) stack->stackTop;
+    if (first == NULL) return NULL;
+    if (first->next != NULL)
+    {
+        return ((struct ExpressionStack*) stack->stackTop)->next->expression;
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
+struct GenericStack *createStackExpression()
 {
     struct ExpressionStack *first = malloc(sizeof(struct ExpressionStack));
     first->next = NULL;
-    return first;
+    struct GenericStack *stack = malloc(sizeof(struct GenericStack));
+    stack->stackTop = (void*)first;
+    stack->pop = popExpression;
+    stack->push = pushExpression;
+    stack->peek = peekExpression;
+    return stack;
 }
 
 struct LineNumberStack *pushLN(struct LineNumber *data,
@@ -741,34 +832,6 @@ int main(int argc, char *argv[])
     string2 = NULL;
 }
 
-struct GrammarStack *pushG(struct Node *node, struct GrammarStack *first)
-{
-    first->node = node;
-    struct GrammarStack *newNode = malloc(sizeof(struct GrammarStack));
-    newNode->next = first;
-    return newNode;
-}
-
-struct GrammarStack *popG(struct GrammarStack *first)
-{
-    if (first->next != NULL)
-    {
-        struct GrammarStack *result = first->next;
-        free(first);
-        first = NULL;
-        return result;
-    }
-    else
-        return first;
-}
-
-struct GenericStack
-{
-    void *stackTop;
-    void *(*push)(void *, void *);
-    void *(*pop)(void *);
-};
-
 struct Expression *allocateSingleCharExpression(char item, int lineNumber)
 {
     struct Expression *newExpression = malloc(sizeof(struct Expression));
@@ -785,7 +848,7 @@ struct Expression *allocateSingleCharExpression(char item, int lineNumber)
 */
 struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
 {
-    struct ExpressionStack *first = createStackE();
+    struct GenericStack *first = createStackExpression();
     struct LinkedString *firstCharacterOnStore = createStack();
     struct LineNumberStack *lineNumberList = createStackLN();
     int counter = 0;
@@ -803,7 +866,7 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
                 (array[counter] == 'f' && array[counter + 1] == '(') ||
                 (array[counter] == 'w' && array[counter + 1] == '('))
         {
-            first = pushE(allocateSingleCharExpression(array[counter], lineNumber), first);
+            first->push(allocateSingleCharExpression(array[counter], lineNumber), first);
             sizeOfExpressionArray++;
         }
         else if (array[counter] == '\n')
@@ -836,13 +899,13 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
             }
             newExp->expression = charBlock;
             newExp->lineNumber = lineNumber;
-            first = pushE(newExp, first);
+            first->push(newExp, first);
             sizeOfExpressionArray++;
             // Separation within for loop is implicit with the splitting off into
             // different expressions
             if (array[counter] != ',')
             {
-                first = pushE(allocateSingleCharExpression(array[counter], lineNumber), first);
+                first->push(allocateSingleCharExpression(array[counter], lineNumber), first);
                 sizeOfExpressionArray++;
             }
         }
@@ -851,14 +914,12 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
     struct Expression **result =
         malloc(sizeOfExpressionArray * sizeof(struct Expression *));
     int j = sizeOfExpressionArray - 1;
-    do
+
+    while (first->peek(first) != NULL)
     {
-        printf("Unrolling expressions: %c\n", *(first->next->expression->expression));
-        result[j] = first->next->expression;
-        first = popE(first);
+        result[j] = first->pop(first);
         j--;
     }
-    while (first->next != NULL);
     free(firstCharacterOnStore);
     firstCharacterOnStore = NULL;
     free(first);
@@ -877,23 +938,14 @@ struct LoopSpecExpression *initialiseLoopSpecExpression()
     return newSpec;
 }
 
-void pushNodeIntoExpressionGroup(struct GrammarStack *currentWorkingNode,
+void pushNodeIntoExpressionGroup(struct GenericStack *currentWorkingNode,
                                  struct Node *nodeToPush)
 {
-    if (currentWorkingNode->next != NULL)
-    {
-        if (currentWorkingNode->next->node->expressionGroup == NULL)
-            currentWorkingNode->next->node->expressionGroup = createStackG();
-        currentWorkingNode->next->node->expressionGroup =
-            pushG(nodeToPush, currentWorkingNode->next->node->expressionGroup);
-    }
-    else
-    {
-        if (currentWorkingNode->node->expressionGroup == NULL)
-            currentWorkingNode->node->expressionGroup = createStackG();
-        currentWorkingNode->node->expressionGroup =
-            pushG(nodeToPush, currentWorkingNode->node->expressionGroup);
-    }
+    struct Node *current = (struct Node*) currentWorkingNode->peek(currentWorkingNode);
+    if (current->expressionGroup == NULL)
+        current->expressionGroup = createStackGrammar();
+    current->expressionGroup->
+        push(nodeToPush, current->expressionGroup);
 }
 
 struct Node *initialiseNode(char currentState)
@@ -930,56 +982,30 @@ void addPlainExpressionToNode(struct Node *node)
     node->conditional = newContainedExpression;
 }
 
-char getCurrentConstructCode(struct GrammarStack *first)
+char getCurrentConstructCode(struct GenericStack *stack)
 {
-    if (first->next == NULL)
-    {
-        return first->node->constructCode;
-    }
-    return first->next->node->constructCode;
+    struct Node *current = (struct Node*) stack->peek(stack);
+    return current->constructCode;
 }
 
-struct GrammarStack *getCurrentExpressionGroup(struct GrammarStack *first)
+struct GenericStack *getCurrentExpressionGroup(struct GenericStack *stack)
 {
-    if (first->next == NULL)
-    {
-        return first->node->expressionGroup;
-    }
-    return first->next->node->expressionGroup;
+    struct Node *current = (struct Node*) stack->peek(stack);
+    return current->expressionGroup;
 }
 
-struct Node *getCurrentNode(struct GrammarStack *first)
+struct Node *getCurrentNode(struct GenericStack *stack)
 {
-    if (first->next == NULL)
-    {
-        return first->node;
-    }
-    return first->next->node;
+    return (struct Node*) stack->peek(stack);
 }
 
-void setCurrentNode(struct GrammarStack *first, struct Node *node)
+union ConditionOrLoopSpec *getCurrentConditional(struct GenericStack *stack)
 {
-    if (first->next != NULL)
-    {
-        first->next->node = node;
-    }
-    else
-    {
-        first->node = node;
-    }
+    struct Node *current = (struct Node*) stack->peek(stack);
+    return current->conditional;
 }
 
-union ConditionOrLoopSpec *getCurrentConditional(struct GrammarStack *first)
-{
-    if (first->next == NULL)
-    {
-        return first->node->conditional;
-    }
-    return first->next->node->conditional;
-}
-
-struct GrammarStack *
-pushMathNodeWhenEncounteringPlusSymbol(struct GrammarStack *currentWorkingNode,
+void pushMathNodeWhenEncounteringPlusSymbol(struct GenericStack *currentWorkingNode,
                                        struct Expression *mathExp,
                                        int *depthOfMathStructure)
 {
@@ -990,7 +1016,7 @@ pushMathNodeWhenEncounteringPlusSymbol(struct GrammarStack *currentWorkingNode,
     {
         newChild = initialiseNode('+');
         pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-        currentWorkingNode = pushG(newChild, currentWorkingNode);
+        currentWorkingNode->push(newChild, currentWorkingNode);
         math = initialiseNode('m');
         addPlainExpressionToNode(math);
         math->conditional->containedExpression = mathExp;
@@ -1003,7 +1029,7 @@ pushMathNodeWhenEncounteringPlusSymbol(struct GrammarStack *currentWorkingNode,
         addPlainExpressionToNode(math);
         math->conditional->containedExpression = mathExp;
         pushNodeIntoExpressionGroup(currentWorkingNode, math);
-        currentWorkingNode = popG(currentWorkingNode);
+        currentWorkingNode->pop(currentWorkingNode);
         (*depthOfMathStructure)--;
     }
     else if (getCurrentConstructCode(currentWorkingNode) == '+')
@@ -1013,11 +1039,10 @@ pushMathNodeWhenEncounteringPlusSymbol(struct GrammarStack *currentWorkingNode,
         math->conditional->containedExpression = mathExp;
         pushNodeIntoExpressionGroup(currentWorkingNode, math);
     }
-    return currentWorkingNode;
 }
 
-struct GrammarStack *pushMathNodeWhenEncounteringMultiplySymbol(
-    struct GrammarStack *currentWorkingNode, struct Expression *mathExp,
+void pushMathNodeWhenEncounteringMultiplySymbol(
+    struct GenericStack *currentWorkingNode, struct Expression *mathExp,
     int *depthOfMathStructure)
 {
     struct Node *math;
@@ -1029,45 +1054,42 @@ struct GrammarStack *pushMathNodeWhenEncounteringMultiplySymbol(
         // of multiplications and additions
         newChild = initialiseNode('+');
         pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-        currentWorkingNode = pushG(newChild, currentWorkingNode);
+        currentWorkingNode->push(newChild, currentWorkingNode);
         newChild = initialiseNode('*');
         pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-        currentWorkingNode = pushG(newChild, currentWorkingNode);
+        currentWorkingNode->push(newChild, currentWorkingNode);
         *depthOfMathStructure = (*depthOfMathStructure) + 2;
     }
     else if (getCurrentConstructCode(currentWorkingNode) == '+')
     {
         newChild = initialiseNode('*');
         pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-        currentWorkingNode = pushG(newChild, currentWorkingNode);
+        currentWorkingNode->push(newChild, currentWorkingNode);
         (*depthOfMathStructure)++;
     }
     math = initialiseNode('m');
     addPlainExpressionToNode(math);
     math->conditional->containedExpression = mathExp;
     pushNodeIntoExpressionGroup(currentWorkingNode, math);
-    return currentWorkingNode;
 }
 
-struct GrammarStack *pushWhileNode(struct GrammarStack *currentWorkingNode)
+void pushWhileNode(struct GenericStack *currentWorkingNode)
 {
     struct Node *newChild = initialiseNode('w');
     pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-    currentWorkingNode = pushG(newChild, currentWorkingNode);
+    currentWorkingNode->push(newChild, currentWorkingNode);
     addInitialWhileConditionToNode(newChild);
-    return currentWorkingNode;
 }
 
-struct GrammarStack *pushForNode(struct GrammarStack *currentWorkingNode)
+void pushForNode(struct GenericStack *currentWorkingNode)
 {
     struct Node *newChild = initialiseNode('f');
     pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-    currentWorkingNode = pushG(newChild, currentWorkingNode);
+    currentWorkingNode->push(newChild, currentWorkingNode);
     addInitialLoopSpecToNode(newChild);
-    return currentWorkingNode;
 }
 
-struct GrammarStack *pushAssignmentNode(struct GrammarStack *currentWorkingNode,
+void pushAssignmentNode(struct GenericStack *currentWorkingNode,
                                         struct Expression *expression,
                                         int *depthOfMathStructure)
 {
@@ -1075,29 +1097,26 @@ struct GrammarStack *pushAssignmentNode(struct GrammarStack *currentWorkingNode,
     addPlainExpressionToNode(newChild);
     newChild->conditional->containedExpression = expression;
     pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-    currentWorkingNode = pushG(newChild, currentWorkingNode);
+    currentWorkingNode->push(newChild, currentWorkingNode);
     (*depthOfMathStructure)++;
-    return currentWorkingNode;
 }
 
-struct GrammarStack *pushMainMathNode(struct GrammarStack *currentWorkingNode,
+void pushMainMathNode(struct GenericStack *currentWorkingNode,
                                       int *depthOfMathStructure)
 {
     struct Node *newChild = initialiseNode('t');
     pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-    currentWorkingNode = pushG(newChild, currentWorkingNode);
+    currentWorkingNode->push(newChild, currentWorkingNode);
     (*depthOfMathStructure)++;
-    return currentWorkingNode;
 }
 
-struct GrammarStack *pushBracketNode(struct GrammarStack *currentWorkingNode,
+void pushBracketNode(struct GenericStack *currentWorkingNode,
                                      int *depthOfMathStructure)
 {
     struct Node *newChild = initialiseNode('b');
     pushNodeIntoExpressionGroup(currentWorkingNode, newChild);
-    currentWorkingNode = pushG(newChild, currentWorkingNode);
+    currentWorkingNode->push(newChild, currentWorkingNode);
     (*depthOfMathStructure)++;
-    return currentWorkingNode;
 }
 
 void deallocateConditionOrLoopSpec(char constructCode, union ConditionOrLoopSpec *condition)
@@ -1161,8 +1180,8 @@ void deallocateConditionOrLoopSpec(char constructCode, union ConditionOrLoopSpec
 
 void deallocateParseTree(struct Node *root)
 {
-    struct GrammarStack *currentWorkingNode = createStackG();
-    currentWorkingNode = pushG(root, currentWorkingNode);
+    struct GenericStack *currentWorkingNode = createStackGrammar();
+    currentWorkingNode->push(root, currentWorkingNode);
     while(1)
     {
         if (getCurrentExpressionGroup(currentWorkingNode) == NULL)
@@ -1174,30 +1193,32 @@ void deallocateParseTree(struct Node *root)
             }
 
             free(getCurrentNode(currentWorkingNode));
-            currentWorkingNode = popG(currentWorkingNode);
+            currentWorkingNode->pop(currentWorkingNode);
             /*
              The following check terminates the loop because the last node has already been deallocated
              the last node, the root node. Due to the way the stack works, the top of the stack refers to
              the same node after the previous pop. Specifically when next is NULL, then the last pop action
              hasn't changed the effective top of the stack (based on how the stack utility I wrote works)
             */
-            if (currentWorkingNode->next == NULL)
+            if (getCurrentNode(currentWorkingNode) == NULL)
                 break;
 
-            getCurrentNode(currentWorkingNode)->expressionGroup =
-                popG(getCurrentNode(currentWorkingNode)->expressionGroup);
+            getCurrentNode(currentWorkingNode)->expressionGroup->
+            pop(getCurrentNode(currentWorkingNode)->expressionGroup);
             // Similar thing applies here
-            if (getCurrentExpressionGroup(currentWorkingNode)->next == NULL)
+            if (getCurrentNode(getCurrentExpressionGroup(currentWorkingNode)) == NULL)
             {
+                free(getCurrentExpressionGroup(currentWorkingNode)->stackTop);
                 free(getCurrentExpressionGroup(currentWorkingNode));
                 getCurrentNode(currentWorkingNode)->expressionGroup = NULL;
             }
         }
         else
         {
-            currentWorkingNode = pushG(getCurrentNode(getCurrentExpressionGroup(currentWorkingNode)), currentWorkingNode);
+            currentWorkingNode->push(getCurrentNode(getCurrentExpressionGroup(currentWorkingNode)), currentWorkingNode);
         }
     }
+    free(currentWorkingNode->stackTop);
     free(currentWorkingNode);
 };
 
@@ -1220,9 +1241,9 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens)
 {
     struct Node *newChild;
     struct Node *initialNode = initialiseNode('r');
-    initialNode->expressionGroup = createStackG();
-    struct GrammarStack *currentWorkingNode = createStackG();
-    currentWorkingNode = pushG(initialNode, currentWorkingNode);
+    initialNode->expressionGroup = createStackGrammar();
+    struct GenericStack *currentWorkingNode = createStackGrammar();
+    currentWorkingNode->push(initialNode, currentWorkingNode);
     int needToDeallocateCurrentExpression = 0;
     int encounteredInvalidToken = 0;
     int depthOfMathStructure = 0;
@@ -1318,13 +1339,13 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens)
         }
         else if (*(lexedContent[i]->expression) == '}')
         {
-            currentWorkingNode = popG(currentWorkingNode);
+            currentWorkingNode->pop(currentWorkingNode);
             needToDeallocateCurrentExpression = 1;
         }
         else if (*(lexedContent[i]->expression) == '(' &&
                  currentContext == NORMAL && currentState == 'w')
         {
-            currentWorkingNode = pushWhileNode(currentWorkingNode);
+            pushWhileNode(currentWorkingNode);
             currentContext = FOUND_LOOP;
             needToDeallocateCurrentExpression = 1;
         }
@@ -1344,62 +1365,59 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens)
         }
         else if (currentContext == FOUND_LOOP && currentState == 'f')
         {
-            currentWorkingNode->next->node->conditional->forLoopSpec->initialiseLoop =
+            ((struct GrammarStack*)currentWorkingNode->stackTop)->next->node->conditional->forLoopSpec->initialiseLoop =
                 lexedContent[i];
             currentContext = FOUND_INITIALISE_LOOP;
         }
         else if (currentContext == FOUND_INITIALISE_LOOP &&
                  currentState == 'f')
         {
-            currentWorkingNode->next->node->conditional->forLoopSpec->limitLoop =
+            ((struct GrammarStack*)currentWorkingNode->stackTop)->next->node->conditional->forLoopSpec->limitLoop =
                 lexedContent[i];
             currentContext = FOUND_LIMIT_LOOP;
         }
         else if (currentContext == FOUND_LIMIT_LOOP &&
                  currentState == 'f')
         {
-            currentWorkingNode->next->node->conditional->forLoopSpec->incrementLoop =
+            ((struct GrammarStack*)currentWorkingNode->stackTop)->next->node->conditional->forLoopSpec->incrementLoop =
                 lexedContent[i];
             currentContext = FOUND_INCREMENT_LOOP;
         }
         else if (*(lexedContent[i]->expression) == '(' && currentState == 'f')
         {
-            currentWorkingNode = pushForNode(currentWorkingNode);
+            pushForNode(currentWorkingNode);
             currentContext = FOUND_LOOP;
         }
         else if (currentContext == STATEMENT_NORMAL &&
                  *(lexedContent[i]->expression) != '=')
         {
-            currentWorkingNode = pushAssignmentNode(
-                                     currentWorkingNode, lexedContent[i], &depthOfMathStructure);
+            pushAssignmentNode(currentWorkingNode, lexedContent[i], &depthOfMathStructure);
         }
         else if (currentContext == STATEMENT_NORMAL &&
                  *(lexedContent[i]->expression) == '=')
         {
             currentContext = LEFT_ASSIGNMENT;
-            currentWorkingNode =
-                pushMainMathNode(currentWorkingNode, &depthOfMathStructure);
+            pushMainMathNode(currentWorkingNode, &depthOfMathStructure);
             needToDeallocateCurrentExpression = 1;
         }
         else if (currentContext == LEFT_ASSIGNMENT &&
                  (*(lexedContent[i + 1]->expression) == '+' ||
                   *(lexedContent[i + 1]->expression) == ';'))
         {
-            currentWorkingNode = pushMathNodeWhenEncounteringPlusSymbol(
-                                     currentWorkingNode, lexedContent[i], &depthOfMathStructure);
+            pushMathNodeWhenEncounteringPlusSymbol(currentWorkingNode, lexedContent[i], &depthOfMathStructure);
         }
         else if (currentContext == LEFT_ASSIGNMENT &&
                  (*(lexedContent[i + 1]->expression) == '*' ||
                   *(lexedContent[i + 1]->expression) == ';'))
         {
-            currentWorkingNode = pushMathNodeWhenEncounteringMultiplySymbol(
+            pushMathNodeWhenEncounteringMultiplySymbol(
                                      currentWorkingNode, lexedContent[i], &depthOfMathStructure);
         }
         else if (*(lexedContent[i]->expression) == ';')
         {
             while (depthOfMathStructure > 0)
             {
-                currentWorkingNode = popG(currentWorkingNode);
+                currentWorkingNode->pop(currentWorkingNode);
                 depthOfMathStructure--;
             }
             currentContext = STATEMENT_NORMAL;
@@ -1409,15 +1427,14 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens)
                  *(lexedContent[i]->expression) == '(')
         {
             // 'b' indicates a node for brackets
-            currentWorkingNode =
-                pushBracketNode(currentWorkingNode, &depthOfMathStructure);
+            pushBracketNode(currentWorkingNode, &depthOfMathStructure);
             needToDeallocateCurrentExpression = 1;
         }
         else if (currentContext == LEFT_ASSIGNMENT &&
                  *(lexedContent[i]->expression) == ')')
         {
             // 'b' indicates a node for brackets
-            currentWorkingNode = popG(currentWorkingNode);
+            currentWorkingNode->pop(currentWorkingNode);
             depthOfMathStructure--;
             needToDeallocateCurrentExpression = 1;
         }
@@ -1443,6 +1460,7 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens)
 
     if (encounteredInvalidToken)
     {
+        printf("HERE");
         // De allocate remaining tokens and submit an error in parsing
         // There may be instances where these two operations both try to deallocate lexedContent[i]
         deallocateParseTree(initialNode);
@@ -1453,9 +1471,18 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens)
         }
 
     }
-    /*
+
     printf("Root Node: %c\n",
-           initialNode->expressionGroup->next->node->constructCode);
+           initialNode->constructCode);
+   printf("Child node last appearing: %c\n",
+   getCurrentConstructCode(initialNode->expressionGroup));
+    printf("Next Child node last appearing: %c\n",
+   getCurrentConstructCode(getCurrentExpressionGroup(initialNode->expressionGroup)));
+   printf("Next Child node last appearing: %c\n",
+   getCurrentConstructCode(getCurrentExpressionGroup(getCurrentExpressionGroup(initialNode->expressionGroup))));
+/*
+    printf("Root Node: %c\n",
+           initialNode);
     printf("initialise %c\n",
            initialNode->expressionGroup->next->node->conditional->forLoopSpec
                ->initialiseLoop->expression[0]);
@@ -1487,6 +1514,6 @@ struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens)
            initialNode->expressionGroup->next->node->expressionGroup->next->node
                ->expressionGroup->next->node->expressionGroup->next->next->node
                ->constructCode);
-    */
+*/
     return initialNode;
 }
