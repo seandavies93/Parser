@@ -787,10 +787,14 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
 {
     struct ExpressionStack *first = createStackE();
     struct LinkedString *firstCharacterOnStore = createStack();
+    struct LineNumberStack *lineNumberList = createStackLN();
     int counter = 0;
     int tempCharacterCount = 0;
     int sizeOfExpressionArray = 0;
     int lineNumber = 0;
+    struct LineNumber *lines = malloc(sizeof(struct LineNumber));
+    lines->number = lineNumber;
+    pushLN(lines, lineNumberList);
     while (counter < size)
     {
         printf("Reading char lexer: %c\n", array[counter]);
@@ -805,6 +809,9 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
         else if (array[counter] == '\n')
         {
             lineNumber++;
+            lines = malloc(sizeof(struct LineNumber));
+            lines->number = lineNumber;
+            pushLN(lines, lineNumberList);
         }
         else if (array[counter] != '(' && array[counter] != ')' &&
                  array[counter] != ';' && array[counter] != 'f' &&
