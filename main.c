@@ -317,33 +317,64 @@ struct GenericStack *createStackExpression()
     return stack;
 }
 
-struct LineNumberStack *pushLN(struct LineNumber *data,
-                              struct LineNumberStack *first)
+void pushLineNumber(void *data,
+                              struct GenericStack *stack)
 {
-    first->data = data;
+    if (stack->stackTop == NULL)
+    {
+        stack->stackTop = malloc(sizeof(struct LineNumberStack));
+    }
+    ((struct LineNumberStack*) stack->stackTop)->data = data;
     struct LineNumberStack *newNode = malloc(sizeof(struct LineNumberStack));
-    newNode->next = first;
-    return newNode;
+    newNode->next = (struct LineNumberStack*) stack->stackTop;
+    stack->stackTop = (void*) newNode;
 }
 
-struct LineNumberStack *popLN(struct LineNumberStack *first)
+void *popLineNumber(struct GenericStack *stack)
 {
+    struct LineNumberStack *first = (struct LineNumberStack*) stack->stackTop;
+    struct LineNumber *result;
+    if (first == NULL) return NULL;
     if (first->next != NULL)
     {
-        struct LineNumberStack *result = first->next;
+        result = ((struct LineNumberStack*) stack->stackTop)->next->data;
+        stack->stackTop = (void*)first->next;
         free(first);
-        first = NULL;
-        return result;
+
     }
     else
-        return first;
+    {
+        result = NULL;
+        free(first);
+        stack->stackTop = NULL;
+    }
+    return result;
 }
 
-struct LineNumberStack *createStackLN()
+void *peekLineNumber(struct GenericStack *stack)
+{
+    struct LineNumberStack *first = (struct LineNumberStack*) stack->stackTop;
+    if (first == NULL) return NULL;
+    if (first->next != NULL)
+    {
+        return ((struct LineNumberStack*) stack->stackTop)->next->data;
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
+struct GenericStack *createStackLineNumber()
 {
     struct LineNumberStack *first = malloc(sizeof(struct LineNumberStack));
     first->next = NULL;
-    return first;
+    struct GenericStack *stack = malloc(sizeof(struct GenericStack));
+    stack->stackTop = (void*)first;
+    stack->pop = popLineNumber;
+    stack->push = pushLineNumber;
+    stack->peek = peekLineNumber;
+    return stack;
 }
 //////////////////// END ////////////////////
 // Generate an array of integers indicating the reduction in how far we can skip
@@ -850,14 +881,14 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
 {
     struct GenericStack *first = createStackExpression();
     struct LinkedString *firstCharacterOnStore = createStack();
-    struct LineNumberStack *lineNumberList = createStackLN();
+    //struct LineNumberStack *lineNumberList = createStackLN();
     int counter = 0;
     int tempCharacterCount = 0;
     int sizeOfExpressionArray = 0;
     int lineNumber = 0;
-    struct LineNumber *lines = malloc(sizeof(struct LineNumber));
-    lines->number = lineNumber;
-    pushLN(lines, lineNumberList);
+    //struct LineNumber *lines = malloc(sizeof(struct LineNumber));
+    //lines->number = lineNumber;
+    //pushLN(lines, lineNumberList);
     while (counter < size)
     {
         printf("Reading char lexer: %c\n", array[counter]);
@@ -871,10 +902,10 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
         }
         else if (array[counter] == '\n')
         {
-            lineNumber++;
-            lines = malloc(sizeof(struct LineNumber));
-            lines->number = lineNumber;
-            pushLN(lines, lineNumberList);
+            //lineNumber++;
+            //lines = malloc(sizeof(struct LineNumber));
+            //lines->number = lineNumber;
+            //pushLN(lines, lineNumberList);
         }
         else if (array[counter] != '(' && array[counter] != ')' &&
                  array[counter] != ';' && array[counter] != 'f' &&
@@ -1196,9 +1227,8 @@ void deallocateParseTree(struct Node *root)
             currentWorkingNode->pop(currentWorkingNode);
             /*
              The following check terminates the loop because the last node has already been deallocated
-             the last node, the root node. Due to the way the stack works, the top of the stack refers to
-             the same node after the previous pop. Specifically when next is NULL, then the last pop action
-             hasn't changed the effective top of the stack (based on how the stack utility I wrote works)
+             the last node, the root node. Also, due to the above check on the expression group being null,
+             we have already guaranteed that the root node's expression group has been fully deallocated
             */
             if (getCurrentNode(currentWorkingNode) == NULL)
                 break;
