@@ -13,7 +13,8 @@ struct Expression
     Possible memory efficient way of dealing with line numbers
     consider after trying the naive way
 */
-struct LineNumber {
+struct LineNumber
+{
     int number;
     struct ExpressionStack *applicableExpressions;
 };
@@ -23,7 +24,8 @@ struct LineNumber {
     and an association structure between line numbers and
     expressions.
 */
-struct LexerOutputData {
+struct LexerOutputData
+{
     struct Expression **expressionOutput;
     struct LineNumberStack *first;
 };

@@ -74,6 +74,9 @@ struct RowList *createRowListFirst();
 */
 struct Row *createRow(int columnIndex);
 
+/*
+  Create a column entry along with an entry in one go
+*/
 struct Row *createRowWithEntry(int columnIndex, int nextSymbol);
 
 /*
@@ -85,34 +88,39 @@ struct Row *createRowFirst();
   Inserting an item in a row at the correct position (based on column index and
   assuming a node does not exist for this columnIndex already)
 */
-struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
-        struct Row *row);
+struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex, struct Row *row);
 
 /*
   Insert an item into the table based on the desired indices
 */
-struct RowList *insertAtPlace(int nextSymbol, int columnIndex, int rowIndex,
-                              struct RowList *table);
+struct RowList *insertAtPlace(int nextSymbol, int columnIndex, int rowIndex, struct RowList *table);
 
+/*
+  Find a value in the specified place in the table
+*/
 int getItemAtPlace(int columnIndex, int rowIndex, struct RowList *table);
 
+/*
+  Delete an item at specified position
+*/
 struct Row *deleteItemAtAppropriateRowPosition(int columnIndex, struct Row *row);
 
+/*
+  Delete the entry at the specified row and column
+*/
 void deleteAtPlace(int columnIndex, int rowIndex, struct RowList *table);
 
 /*
   Find the first index of a matching string in the supplied string using the
-  regex
+  regular expression
 */
-int findMatch(char *array, int startIndex, int endIndex,
-              struct RegexData *regex);
+int findMatch(char *array, int startIndex, int endIndex, struct RegexData *regex);
 
 /*
   Find the last index of a matching string within another string, using the
   Regex data
 */
-int findMatchEndIndex(char *array, int startIndex, int endIndex,
-                      struct RegexData *regex);
+int findMatchEndIndex(char *array, int startIndex, int endIndex, struct RegexData *regex);
 
 /*
   Creates a basic character string regular expression matcher
