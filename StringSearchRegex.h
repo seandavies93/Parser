@@ -31,8 +31,10 @@ struct RegexData
     int finalState;
 };
 
-// Generate an array of integers indicating the reduction in how far we can skip
-// ahead when matching a string in some text
+/*
+  Generate an array of integers indicating the reduction in how far we can skip
+  ahead when matching a string in some text
+*/
 int *generatePatternSkipData(
     char *pattern,
     int sizeOfPattern

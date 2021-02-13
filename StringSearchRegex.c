@@ -3,8 +3,6 @@
 #include <string.h>
 #include "StringSearchRegex.h"
 
-// Generate an array of integers indicating the reduction in how far we can skip
-// ahead when matching a string in some text
 int *generatePatternSkipData(char *pattern, int sizeOfPattern)
 {
     int i = 0;
@@ -22,10 +20,6 @@ int *generatePatternSkipData(char *pattern, int sizeOfPattern)
     return patternSkipReductionData;
 }
 
-/*
-  We can iterate backwards through the pattern skip reduction array to find
-  if a prefix duplicate exists in the pattern
-*/
 int getAppropriateSkipReduction(int *patternSkipReductionData, int index)
 {
     int currentIndex = index;
@@ -40,15 +34,6 @@ int getAppropriateSkipReduction(int *patternSkipReductionData, int index)
     return 0;
 }
 
-/*
-  If there are no repetitions of a prefix to be found in the pattern then
-  we can fully skip to the current index
-  The only situation the necessitates not fully skipping is if there is a
-  substring prefix all the way up to  j - 1 (but not including j as if we
-  are in this clause then we know this doesn't match therefore that
-  character of the prefix substring will not match when it first appears
-  in the actual prefix not the duplicate)
-*/
 int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern)
 {
     int i = 0;
@@ -79,16 +64,6 @@ int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern)
     return i - j;
 }
 
-/*
-                           abcdefgouabcdefgouk
-ilsdfisdlfiulsidufabcdefgouabcdefgoutfgrres
-*/
-
-
-
-/*
-  Create a row with a particular rowIndex
-*/
 struct RowList *createRowList(int rowIndex)
 {
     struct RowList *first = malloc(sizeof(struct RowList));
@@ -97,9 +72,6 @@ struct RowList *createRowList(int rowIndex)
     return first;
 }
 
-/*
-  Create an initial row
-*/
 struct RowList *createRowListFirst()
 {
     struct RowList *first = malloc(sizeof(struct RowList));
@@ -108,9 +80,6 @@ struct RowList *createRowListFirst()
     return first;
 }
 
-/*
-  Create a column entry with a particular columnIndex
-*/
 struct Row *createRow(int columnIndex)
 {
     struct Row *first = malloc(sizeof(struct Row));
@@ -127,9 +96,6 @@ struct Row *createRowWithEntry(int columnIndex, int nextSymbol) {
     return first;
 }
 
-/*
-  Create an initial column entry
-*/
 struct Row *createRowFirst()
 {
     struct Row *first = malloc(sizeof(struct Row));
@@ -138,10 +104,6 @@ struct Row *createRowFirst()
     return first;
 }
 
-/*
-  Inserting an item in a row at the correct position (based on column index and
-  assuming a node does not exist for this columnIndex already)
-*/
 struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
         struct Row *row)
 {
@@ -153,11 +115,6 @@ struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
         return createRowWithEntry(columnIndex, nextSymbol);
     }
 
-    /*
-     Iterate through keeping track of the current node and the previous
-     stop as soon as the tracker's columnIndex stops being less then the
-     supplied columnIndex
-    */
     while (tracker != NULL && tracker->columnIndex < columnIndex)
     {
         previous = tracker;
@@ -174,9 +131,6 @@ struct Row *insertItemAtAppropriateRowPosition(int nextSymbol, int columnIndex,
     return newRow;
 }
 
-/*
-  Insert an item into the table based on the desired indices
-*/
 struct RowList *insertAtPlace(int nextSymbol, int columnIndex, int rowIndex,
                               struct RowList *table)
 {
@@ -295,10 +249,6 @@ void deleteAtPlace(int columnIndex, int rowIndex,
     }
 }
 
-/*
-  Find the first index of a matching string in the supplied string using the
-  regex
-*/
 int findMatch(char *array, int startIndex, int endIndex,
               struct RegexData *regex)
 {
@@ -323,10 +273,6 @@ int findMatch(char *array, int startIndex, int endIndex,
     return offset + relativeIndex - 1;
 }
 
-/*
-  Find the last index of a matching string within another string, using the
-  Regex data
-*/
 int findMatchEndIndex(char *array, int startIndex, int endIndex,
                       struct RegexData *regex)
 {
@@ -343,9 +289,6 @@ int findMatchEndIndex(char *array, int startIndex, int endIndex,
     return trackingIndex - 1;
 }
 
-/*
-  Creates a basic character string regular expression matcher
-*/
 struct RegexData *createBasicAlphabetStringMatcher()
 {
     int startSymbol = 32;
