@@ -11,10 +11,7 @@ int *generatePatternSkipData(char *pattern, int sizeOfPattern)
     patternSkipReductionData[0] = 0;
     while (j < sizeOfPattern)
     {
-        if (pattern[i] != pattern[j])
-        {
-            i = 0;
-        }
+        if (pattern[i] != pattern[j]) i = 0;
         patternSkipReductionData[j++] = i++;
     }
     return patternSkipReductionData;
@@ -23,14 +20,10 @@ int *generatePatternSkipData(char *pattern, int sizeOfPattern)
 int getAppropriateSkipReduction(int *patternSkipReductionData, int index)
 {
     int currentIndex = index;
-    while (patternSkipReductionData[index] == 0 && index >= 0)
-    {
-        index--;
-    }
-    if (currentIndex - index == 1)
-    {
-        return patternSkipReductionData[currentIndex - 1] + 1;
-    }
+    while (patternSkipReductionData[index] == 0 && index >= 0) index--;
+
+    if (currentIndex - index == 1) return patternSkipReductionData[currentIndex - 1] + 1;
+
     return 0;
 }
 
