@@ -35,9 +35,15 @@ struct GenericStack
 
 struct LinkedString *createStack();
 
-struct LinkedString *push(char character, struct LinkedString *first);
+struct LinkedString *push(
+    char character,
+    struct LinkedString *first
+);
 
-struct LinkedString *pop(struct LinkedString *first, char *addressForPoppedElement);
+struct LinkedString *pop(
+    struct LinkedString *first,
+    char *addressForPoppedElement
+);
 
 struct GenericStack *createStackGrammar();
 

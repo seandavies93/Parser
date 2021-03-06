@@ -20,6 +20,7 @@ int *generatePatternSkipData(char *pattern, int sizeOfPattern)
 int getAppropriateSkipReduction(int *patternSkipReductionData, int index)
 {
     int currentIndex = index;
+
     while (patternSkipReductionData[index] == 0 && index >= 0) index--;
 
     if (currentIndex - index == 1) return patternSkipReductionData[currentIndex - 1] + 1;
@@ -31,9 +32,8 @@ int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern)
 {
     int i = 0;
     int j = 0;
-    int *patternSkipReductionData =
-        generatePatternSkipData(pattern, sizeOfPattern);
-    while ((i < sizeOfText) && (j < sizeOfPattern))
+    int *patternSkipReductionData = generatePatternSkipData(pattern, sizeOfPattern);
+    while (i < sizeOfText && j < sizeOfPattern)
     {
         if (text[i] != pattern[j])
         {
