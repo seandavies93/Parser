@@ -45,8 +45,6 @@ struct termArray
     struct termArray *next;
 };
 
-
-
 struct LinkedStack
 {
     char character;
@@ -61,7 +59,7 @@ void deAllocateExpressionMemory(struct Expression *expression)
     expression = NULL;
 }
 
-struct Expression **tokenizeNew(char *array, int size, int *numberTokens);
+struct LexerOutputData *tokenizeNew(char *array, int size, int *numberTokens);
 struct Node *parseCode(struct Expression **lexedContent, int numberOfTokens);
 
 int main(int argc, char *argv[])
@@ -107,21 +105,22 @@ int main(int argc, char *argv[])
     free(current2);
     current2 = NULL;
 
-    int result = searchText(string1, string2, size1, size2);
-    printf("result %d\n", result);
+    //int result = searchText(string1, string2, size1, size2);
+    //printf("result %d\n", result);
 
-    //int *numberOfTokens = malloc(sizeof(int));
-    //struct Expression **arrayExp = tokenizeNew(string1, size1, numberOfTokens);
+    int *numberOfTokens = malloc(sizeof(int));
+    struct LexerOutputData *data = tokenizeNew(string1, size1, numberOfTokens);
+    struct Expression **arrayExp = data->expressionOutput;
     // Need to first the individual pointers in this block, then the entire
     // block
-    //struct Node *parseTree = parseCode(arrayExp, *numberOfTokens);
+    struct Node *parseTree = parseCode(arrayExp, *numberOfTokens);
 
     /*
       Note for now: all that matters from the perspective of the free function is
       that the pointer value matches one that it has assigned in its assignment table (might be how it works under the hood)
     */
-    //free(arrayExp);
-    //arrayExp = NULL;
+    free(arrayExp);
+    arrayExp = NULL;
 
     // Test out the sparse array
     struct RowList *table = createRowListFirst();
@@ -145,7 +144,7 @@ int main(int argc, char *argv[])
 
     free(string1);
     free(string2);
-    //free(numberOfTokens);
+    free(numberOfTokens);
     string1 = NULL;
     string2 = NULL;
 }
@@ -161,18 +160,27 @@ struct Expression *allocateSingleCharExpression(char item, int lineNumber)
     return newExpression;
 }
 
+struct LineNumber *initialiseLineNumber(int number) {
+    struct LineNumber *object = malloc(sizeof(struct LineNumber));
+    object->applicableExpressions = createStackExpression();
+    return object;
+};
+
 /*
     function for splitting a string into tokens
 */
-struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
+struct LexerOutputData *tokenizeNew(char *array, int size, int *numberOfTokens)
 {
     struct GenericStack *first = createStackExpression();
     struct LinkedString *firstCharacterOnStore = createStack();
-    //struct LineNumberStack *lineNumberList = createStackLN();
+    struct LexerOutputData *output = malloc(sizeof(struct LexerOutputData));
+    int lineNumber = 1;
+    struct LineNumber *currentLineNumber = initialiseLineNumber(lineNumber);
+    output->first = createStackLineNumber();
     int counter = 0;
     int tempCharacterCount = 0;
     int sizeOfExpressionArray = 0;
-    int lineNumber = 0;
+
     //struct LineNumber *lines = malloc(sizeof(struct LineNumber));
     //lines->number = lineNumber;
     //pushLN(lines, lineNumberList);
@@ -185,14 +193,14 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
                 (array[counter] == 'w' && array[counter + 1] == '('))
         {
             first->push(allocateSingleCharExpression(array[counter], lineNumber), first);
+            currentLineNumber->applicableExpressions->push(first->stackTop, currentLineNumber->applicableExpressions);
             sizeOfExpressionArray++;
         }
         else if (array[counter] == '\n')
         {
-            //lineNumber++;
-            //lines = malloc(sizeof(struct LineNumber));
-            //lines->number = lineNumber;
-            //pushLN(lines, lineNumberList);
+            lineNumber++;
+            currentLineNumber = initialiseLineNumber(lineNumber);
+            output->first->push(currentLineNumber, output->first);
         }
         else if (array[counter] != '(' && array[counter] != ')' &&
                  array[counter] != ';' && array[counter] != 'f' &&
@@ -218,12 +226,14 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
             newExp->expression = charBlock;
             newExp->lineNumber = lineNumber;
             first->push(newExp, first);
+            currentLineNumber->applicableExpressions->push(first->stackTop, currentLineNumber->applicableExpressions);
             sizeOfExpressionArray++;
             // Separation within for loop is implicit with the splitting off into
             // different expressions
             if (array[counter] != ',')
             {
                 first->push(allocateSingleCharExpression(array[counter], lineNumber), first);
+                currentLineNumber->applicableExpressions->push(first->stackTop, currentLineNumber->applicableExpressions);
                 sizeOfExpressionArray++;
             }
         }
@@ -243,7 +253,8 @@ struct Expression **tokenizeNew(char *array, int size, int *numberOfTokens)
     free(first);
     first = NULL;
     *numberOfTokens = sizeOfExpressionArray;
-    return result;
+    output->expressionOutput = result;
+    return output;
 };
 
 struct LoopSpecExpression *initialiseLoopSpecExpression()

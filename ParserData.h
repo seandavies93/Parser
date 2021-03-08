@@ -16,7 +16,7 @@ struct Expression
 struct LineNumber
 {
     int number;
-    struct ExpressionStack *applicableExpressions;
+    struct GenericStack *applicableExpressions;
 };
 
 /*
@@ -27,7 +27,7 @@ struct LineNumber
 struct LexerOutputData
 {
     struct Expression **expressionOutput;
-    struct LineNumberStack *first;
+    struct GenericStack *first;
 };
 
 struct LoopSpecExpression
