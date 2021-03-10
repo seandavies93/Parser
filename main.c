@@ -248,7 +248,6 @@ struct LexerOutputData *tokenizeNew(char *array, int size, int *numberOfTokens)
         result[j] = first->pop(first);
         currentLineNumber = lineNumberStack->pop(lineNumberStack);
         output->lineNumbers[j] = currentLineNumber;
-        free(currentLineNumber);
         j--;
     }
     free(firstCharacterOnStore);
