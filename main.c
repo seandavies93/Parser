@@ -160,9 +160,9 @@ struct Expression *allocateSingleCharExpression(char item, int lineNumber)
     return newExpression;
 }
 
-struct LineNumber *initialiseLineNumber(int number) {
-    struct LineNumber *object = malloc(sizeof(struct LineNumber));
-    object->applicableExpressions = createStackExpression();
+int *initialiseLineNumber(int number) {
+    int *object = malloc(sizeof(int));
+    *object = number;
     return object;
 };
 
@@ -175,8 +175,8 @@ struct LexerOutputData *tokenizeNew(char *array, int size, int *numberOfTokens)
     struct LinkedString *firstCharacterOnStore = createStack();
     struct LexerOutputData *output = malloc(sizeof(struct LexerOutputData));
     int lineNumber = 1;
-    struct LineNumber *currentLineNumber = initialiseLineNumber(lineNumber);
-    output->first = createStackLineNumber();
+    int *currentLineNumber = initialiseLineNumber(lineNumber);
+    struct GenericStack *lineNumberStack = createStackLineNumber();
     int counter = 0;
     int tempCharacterCount = 0;
     int sizeOfExpressionArray = 0;
@@ -193,14 +193,13 @@ struct LexerOutputData *tokenizeNew(char *array, int size, int *numberOfTokens)
                 (array[counter] == 'w' && array[counter + 1] == '('))
         {
             first->push(allocateSingleCharExpression(array[counter], lineNumber), first);
-            currentLineNumber->applicableExpressions->push(first->stackTop, currentLineNumber->applicableExpressions);
+            lineNumberStack->push(currentLineNumber, lineNumberStack);
             sizeOfExpressionArray++;
         }
         else if (array[counter] == '\n')
         {
             lineNumber++;
             currentLineNumber = initialiseLineNumber(lineNumber);
-            output->first->push(currentLineNumber, output->first);
         }
         else if (array[counter] != '(' && array[counter] != ')' &&
                  array[counter] != ';' && array[counter] != 'f' &&
@@ -226,14 +225,14 @@ struct LexerOutputData *tokenizeNew(char *array, int size, int *numberOfTokens)
             newExp->expression = charBlock;
             newExp->lineNumber = lineNumber;
             first->push(newExp, first);
-            currentLineNumber->applicableExpressions->push(first->stackTop, currentLineNumber->applicableExpressions);
+            lineNumberStack->push(currentLineNumber, lineNumberStack);
             sizeOfExpressionArray++;
             // Separation within for loop is implicit with the splitting off into
             // different expressions
             if (array[counter] != ',')
             {
                 first->push(allocateSingleCharExpression(array[counter], lineNumber), first);
-                currentLineNumber->applicableExpressions->push(first->stackTop, currentLineNumber->applicableExpressions);
+                lineNumberStack->push(currentLineNumber, lineNumberStack);
                 sizeOfExpressionArray++;
             }
         }
@@ -241,11 +240,15 @@ struct LexerOutputData *tokenizeNew(char *array, int size, int *numberOfTokens)
     }
     struct Expression **result =
         malloc(sizeOfExpressionArray * sizeof(struct Expression *));
+    output->lineNumbers = malloc(sizeOfExpressionArray * sizeof(int*));
     int j = sizeOfExpressionArray - 1;
 
     while (first->peek(first) != NULL)
     {
         result[j] = first->pop(first);
+        currentLineNumber = lineNumberStack->pop(lineNumberStack);
+        output->lineNumbers[j] = currentLineNumber;
+        free(currentLineNumber);
         j--;
     }
     free(firstCharacterOnStore);

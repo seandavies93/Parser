@@ -168,7 +168,7 @@ void pushLineNumber(void *data,
 void *popLineNumber(struct GenericStack *stack)
 {
     struct LineNumberStack *first = (struct LineNumberStack*) stack->stackTop;
-    struct LineNumber *result;
+    int *result;
     if (first == NULL) return NULL;
     if (first->next != NULL)
     {

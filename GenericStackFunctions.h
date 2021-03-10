@@ -21,7 +21,7 @@ struct ExpressionStack
 
 struct LineNumberStack
 { // Collection of line number to expression associations
-    struct LineNumber *data;
+    int *data;
     struct LineNumberStack *next;
 };
 

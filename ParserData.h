@@ -10,16 +10,6 @@ struct Expression
 };
 
 /*
-    Possible memory efficient way of dealing with line numbers
-    consider after trying the naive way
-*/
-struct LineNumber
-{
-    int number;
-    struct GenericStack *applicableExpressions;
-};
-
-/*
     Output from the lexer, including tokenised expressions
     and an association structure between line numbers and
     expressions.
@@ -27,7 +17,7 @@ struct LineNumber
 struct LexerOutputData
 {
     struct Expression **expressionOutput;
-    struct GenericStack *first;
+    int **lineNumbers;
 };
 
 struct LoopSpecExpression
