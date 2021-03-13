@@ -69,9 +69,6 @@ int searchText(
                            abcdefgouabcdefgouk
 ilsdfisdlfiulsidufabcdefgouabcdefgoutfgrres
 */
-
-
-
 /*
   Create a row with a particular rowIndex
 */

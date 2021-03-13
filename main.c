@@ -105,22 +105,22 @@ int main(int argc, char *argv[])
     free(current2);
     current2 = NULL;
 
-    //int result = searchText(string1, string2, size1, size2);
-    //printf("result %d\n", result);
+    int result = searchText(string1, string2, size1, size2);
+    printf("result %d\n", result);
 
-    int *numberOfTokens = malloc(sizeof(int));
-    struct LexerOutputData *data = tokenizeNew(string1, size1, numberOfTokens);
-    struct Expression **arrayExp = data->expressionOutput;
+    //int *numberOfTokens = malloc(sizeof(int));
+    //struct LexerOutputData *data = tokenizeNew(string1, size1, numberOfTokens);
+    //struct Expression **arrayExp = data->expressionOutput;
     // Need to first the individual pointers in this block, then the entire
     // block
-    struct Node *parseTree = parseCode(arrayExp, *numberOfTokens);
+    //struct Node *parseTree = parseCode(arrayExp, *numberOfTokens);
 
     /*
       Note for now: all that matters from the perspective of the free function is
       that the pointer value matches one that it has assigned in its assignment table (might be how it works under the hood)
     */
-    free(arrayExp);
-    arrayExp = NULL;
+    //free(arrayExp);
+    //arrayExp = NULL;
 
     // Test out the sparse array
     struct RowList *table = createRowListFirst();
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
 
     free(string1);
     free(string2);
-    free(numberOfTokens);
+    //free(numberOfTokens);
     string1 = NULL;
     string2 = NULL;
 }

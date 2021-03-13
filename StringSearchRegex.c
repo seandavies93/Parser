@@ -28,6 +28,12 @@ int getAppropriateSkipReduction(int *patternSkipReductionData, int index)
     return 0;
 }
 
+void advanceIndicesWhenMatchingFails(int *i,int *j, int *patternSkipReductionData)
+{
+    *j = (*j != 0) * getAppropriateSkipReduction(patternSkipReductionData, *j) + (*j == 0) * (*j);
+    *i = (*j != 0) * (*i) + (*j == 0) * (*i + 1);
+}
+
 int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern)
 {
     int i = 0;
@@ -37,14 +43,7 @@ int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern)
     {
         if (text[i] != pattern[j])
         {
-            if (j != 0)
-            {
-                j = getAppropriateSkipReduction(patternSkipReductionData, j);
-            }
-            else
-            {
-                i++;
-            }
+            advanceIndicesWhenMatchingFails(&i, &j, patternSkipReductionData);
         }
         else
         {
