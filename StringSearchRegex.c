@@ -30,8 +30,8 @@ int getAppropriateSkipReduction(int *patternSkipReductionData, int index)
 
 void advanceIndicesWhenMatchingFails(int *i,int *j, int *patternSkipReductionData)
 {
-    *j = (*j != 0) * getAppropriateSkipReduction(patternSkipReductionData, *j) + (*j == 0) * (*j);
-    *i = (*j != 0) * (*i) + (*j == 0) * (*i + 1);
+    *j = (*j != 0) ? getAppropriateSkipReduction(patternSkipReductionData, *j) : (*j);
+    *i = (*j != 0) ? (*i) : (*i + 1);
 }
 
 int searchText(char *text, char *pattern, int sizeOfText, int sizeOfPattern)
