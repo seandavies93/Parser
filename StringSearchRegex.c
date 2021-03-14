@@ -129,23 +129,35 @@ struct RowList *insertAtPlace(int nextSymbol, int columnIndex, int rowIndex,
     // Maybe find a way of dealing with the situation where there is initially
     // no row within this function instead
     struct RowList *rowTracker = table;
-    struct Row *columnTracker;
+    struct Row *columnTracker = NULL;
+    int foundRow = 0;
     if (table != NULL)
     {
         while (rowTracker != NULL)
         {
-            columnTracker = rowTracker->row;
-            while (columnTracker != NULL)
+            if (!foundRow)
             {
-                if (columnTracker->columnIndex == columnIndex &&
-                        rowTracker->rowIndex == rowIndex)
+                if (rowTracker->rowIndex == rowIndex)
                 {
-                    columnTracker->nextSymbol = nextSymbol; // Found the node with the right indices, set the value here
+                    foundRow = 1;
+                    continue;
+                }
+                rowTracker = rowTracker->rowList;
+            }
+            else
+            {
+                if (columnTracker == NULL) columnTracker = rowTracker->row;
+
+                if (columnTracker->columnIndex == columnIndex)
+                {
+                    columnTracker->nextSymbol = nextSymbol;
                     return table;
                 }
+
                 columnTracker = columnTracker->next;
+                if (columnTracker == NULL) break;
             }
-            rowTracker = rowTracker->rowList;
+
         }
         rowTracker = table;
         while (rowTracker != NULL)
