@@ -131,6 +131,7 @@ struct RowList *insertAtPlace(int nextSymbol, int columnIndex, int rowIndex,
     struct RowList *rowTracker = table;
     struct Row *columnTracker = NULL;
     int foundRow = 0;
+    int noExistingColumnEntry = 0;
     if (table != NULL)
     {
         while (rowTracker != NULL)
@@ -144,7 +145,7 @@ struct RowList *insertAtPlace(int nextSymbol, int columnIndex, int rowIndex,
                 }
                 rowTracker = rowTracker->rowList;
             }
-            else
+            else if (!noExistingColumnEntry)
             {
                 if (columnTracker == NULL) columnTracker = rowTracker->row;
 
@@ -155,20 +156,15 @@ struct RowList *insertAtPlace(int nextSymbol, int columnIndex, int rowIndex,
                 }
 
                 columnTracker = columnTracker->next;
-                if (columnTracker == NULL) break;
+                if (columnTracker == NULL) noExistingColumnEntry = 1;
             }
-
-        }
-        rowTracker = table;
-        while (rowTracker != NULL)
-        {
-            if (rowTracker->rowIndex == rowIndex)
+            else
             {
                 rowTracker->row = insertItemAtAppropriateRowPosition(
                                       nextSymbol, columnIndex, rowTracker->row);
                 return table;
             }
-            rowTracker = rowTracker->rowList;
+
         }
     }
     // Otherwise we have not found either a a row or column and so we need to
